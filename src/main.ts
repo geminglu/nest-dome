@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { VersioningType } from '@nestjs/common';
+import { VersioningType, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -7,6 +7,14 @@ async function bootstrap() {
   app.enableVersioning({
     type: VersioningType.URI,
   });
-  await app.listen(3000);
+
+  await app.listen(process.env.PORT || 3000);
 }
-bootstrap();
+
+bootstrap().then(() => {
+  Logger.log(`API：http://localhost:${process.env.PORT || 3000}`, 'main.js');
+  Logger.log(
+    `swagger：http://localhost:${process.env.PORT || 3000}/api-docs`,
+    'main.js',
+  );
+});
