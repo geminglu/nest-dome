@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm-model-generator": "typeorm-model-generator -h localhost -d application -p 3306 -u root -x 123456 -e mysql -o temp/"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
@@ -25,13 +26,22 @@
     "@nestjs/core": "^9.0.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^9.0.0",
+    "@nestjs/schedule": "^2.2.0",
+    "@nestjs/typeorm": "^9.0.1",
+    "moment": "^2.29.4",
+    "mysql2": "^3.2.0",
+    "nest-winston": "^1.9.1",
     "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.2.0",
+    "typeorm": "^0.3.12",
     "winston": "^3.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",
     "@nestjs/schematics": "^9.0.0",
     "@nestjs/testing": "^9.0.0",
+    "@types/cors": "^2.8.13",
+    "@types/cron": "^2.0.0",
     "@types/express": "^4.17.13",
     "@types/jest": "29.2.4",
     "@types/node": "18.11.18",
@@ -49,6 +59,7 @@
     "ts-loader": "^9.2.3",
     "ts-node": "^10.0.0",
     "tsconfig-paths": "4.1.1",
+    "typeorm-model-generator": "^0.4.6",
     "typescript": "^4.7.4"
   },
   "jest": {
