@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 import dsConfig from 'src/config/dbConfig';
+import { UploadModule } from './api/upload/upload.module';
 @Dependencies(DataSource)
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import dsConfig from 'src/config/dbConfig';
       },
       inject: [ConfigService],
     }),
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService, Logger],
