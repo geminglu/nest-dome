@@ -1,14 +1,16 @@
-import { Module, MiddlewareConsumer, Logger, Dependencies } from '@nestjs/common';
+import { Module, Logger, Dependencies } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-
 import dsConfig from 'src/config/dbConfig';
+import { UserModule } from './api/user/user.module';
 import { UploadModule } from './api/upload/upload.module';
-@Dependencies(DataSource)
+import { AuthModule } from './api/auth/auth.module';
+import { SystemModule } from './api/system/system.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,6 +29,9 @@ import { UploadModule } from './api/upload/upload.module';
       inject: [ConfigService],
     }),
     UploadModule,
+    UserModule,
+    AuthModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [AppService, Logger],

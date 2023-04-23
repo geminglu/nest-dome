@@ -1,0 +1,36 @@
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthGuard } from '../../guard/auth/auth.guard';
+import { AuthService } from './auth.service';
+import { UserModule } from 'src/api/user/user.module';
+import { AuthController } from './auth.controller';
+import { RolesGuard } from 'src/guard/auth/roles';
+import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([GraphicCodeNetities]),
+    UserModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get('SECRET'),
+        signOptions: { expiresIn: configService.get('ACCESS_TOKEN_EXPIRES') },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
+  exports: [AuthService],
+})
+export class AuthModule {}
