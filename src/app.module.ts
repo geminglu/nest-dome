@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import dsConfig from 'src/config/dbConfig';
+import { APP_GUARD } from '@nestjs/core';
 import { UserModule } from './api/user/user.module';
 import { UploadModule } from './api/upload/upload.module';
 import { AuthModule } from './api/auth/auth.module';

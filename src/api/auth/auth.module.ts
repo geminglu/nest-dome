@@ -30,6 +30,10 @@ import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
   exports: [AuthService],
 })

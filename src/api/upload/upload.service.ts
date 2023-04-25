@@ -24,19 +24,14 @@ export class UploadService {
     return await this.uploadFileRepository.save(uploadFile);
   }
 
-  findAll() {
-    return `This action returns all upload`;
-  }
+  /**
+   * 根据文件id查找文件详情
+   * @param id 文件ID
+   * @returns {UploadFile} 文件信息
+   */
+  async findFile(id: string): Promise<UploadFile> {
+    const result = await this.uploadFileRepository.find({ where: { id } });
 
-  findOne(id: number) {
-    return `This action returns a #${id} upload`;
-  }
-
-  update(id: number, updateUploadDto: UpdateUploadDto) {
-    return `This action updates a #${id} upload`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} upload`;
+    return result[0];
   }
 }

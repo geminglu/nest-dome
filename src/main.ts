@@ -3,8 +3,10 @@ import { VersioningType, Logger, ValidationPipe } from '@nestjs/common';
 import * as cors from 'cors';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { SwaggerModule, DocumentBuilder, SwaggerDocumentOptions } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
+import { ResInterception } from 'src/common/response';
 import { HttpFilter } from 'src/common/filter';
 import winstonLogger from 'src/common/logger';
 import loggerMiddleware from 'src/middleware/logger';
@@ -20,6 +22,15 @@ async function bootstrap() {
   app.enableVersioning({
     type: VersioningType.URI,
   });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+  });
+  // 全局守卫
+  // app.useGlobalGuards(new AuthGuard());
+  // 响应拦截器
+  app.useGlobalInterceptors(new ResInterception());
+  // 异常拦截
+  app.useGlobalFilters(new HttpFilter());
   // 跨域处理
   app.use(cors());
 

@@ -13,7 +13,7 @@ import { UploadFile } from 'src/entities/uploadFile';
     TypeOrmModule.forFeature([UploadFile]),
     MulterModule.register({
       storage: diskStorage({
-        destination: join(__dirname, '../uploads'),
+        destination: join(process.cwd(), '/uploads'),
         filename: (_, file, callback) => {
           const fileName = () => `${new Date().getTime() + v4() + extname(file.originalname)}`;
           return callback(null, fileName());
