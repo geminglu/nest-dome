@@ -53,6 +53,7 @@ async function bootstrap() {
     .setDescription('dome')
     .setVersion('1.0')
     .setExternalDoc('JSON', `http://localhost:${process.env.PORT || 3000}/api-docs-json`)
+    .addBearerAuth()
     .build();
   const options: SwaggerDocumentOptions = {
     operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
