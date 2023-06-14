@@ -7,7 +7,7 @@ import { join } from 'path';
 import { SwaggerModule, DocumentBuilder, SwaggerDocumentOptions } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
 import { ResInterception } from 'src/common/response';
-import { HttpFilter } from 'src/common/filter';
+import { HttpFilter, ExcepFilter } from 'src/common/filter';
 import winstonLogger from 'src/common/logger';
 import loggerMiddleware from 'src/middleware/logger';
 
@@ -16,6 +16,7 @@ async function bootstrap() {
     logger: WinstonModule.createLogger({
       instance: winstonLogger,
     }),
+    cors: false,
   });
 
   // 版本控制
@@ -31,6 +32,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResInterception());
   // 异常拦截
   app.useGlobalFilters(new HttpFilter());
+  app.useGlobalFilters(new ExcepFilter());
   // 跨域处理
   app.use(cors());
 
@@ -39,6 +41,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
+      enableDebugMessages: true,
       transform: true,
       stopAtFirstError: true,
     }),

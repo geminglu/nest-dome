@@ -3,13 +3,14 @@ import { Response, Request } from 'express';
 
 @Catch(HttpException)
 export class HttpFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const exceptionResponse = exception.getResponse();
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const logger = new Logger('loggerMiddleware');
+    const logger = new Logger('HttpFilter');
 
     if (status < HttpStatus.INTERNAL_SERVER_ERROR) {
       logger.warn(`${request.method} ${status} ${request.originalUrl} ${JSON.stringify(exception.getResponse())}`);
@@ -17,13 +18,35 @@ export class HttpFilter implements ExceptionFilter {
       logger.error(exception);
     }
 
-    let msg: {
-      message?: string;
-    };
-    // eslint-disable-next-line prefer-const
-    msg = exception.getResponse() as object;
     response.status(status).json({
-      message: msg.message,
+      success: false,
+      message: exceptionResponse?.message || exception.message,
+      statusCode: status,
+    });
+  }
+}
+
+@Catch()
+export class ExcepFilter implements ExceptionFilter {
+  catch(exception: any, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const exceptionResponse = exception.getResponse;
+    const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const logger = new Logger('ExcepFilter');
+
+    if (status < HttpStatus.INTERNAL_SERVER_ERROR) {
+      logger.warn(`${request.method} ${status} ${request.originalUrl} ${JSON.stringify(exception)}`);
+    } else {
+      logger.error(exception);
+    }
+
+    response.status(status).json({
+      success: false,
+      message:
+        exceptionResponse?.message || (exception.getResponse && exception.getResponse()?.message) || exception.message,
       statusCode: status,
     });
   }
