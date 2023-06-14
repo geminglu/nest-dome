@@ -1,61 +1,52 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-  ValidationPipe,
-  UsePipes,
-  Res,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, UserInfo } from './dto/userDto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user-dto';
-import {
-  ApiOperation,
-  ApiParam,
-  ApiQuery,
-  ApiTags,
-  ApiResponse,
-  ApiHeader,
-  ApiOkResponse,
-  ApiCreatedResponse,
-} from '@nestjs/swagger';
-import { Response, Request } from 'express';
+import { ApiOperation, ApiParam, ApiTags, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
+import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response';
+import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
+import { ResultData } from 'src/utils/result';
+import { ResCerated } from 'src/utils/api.Response';
 
 @Controller({
   path: 'user',
   version: '1',
 })
 @ApiTags('用户')
+@ResUnauthorized()
+@ResServerErrorResponse()
+@ApiExtraModels(UserInfo)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService, private dataSource: DataSource) {}
 
   @Post()
   @ApiOperation({
     summary: '创建用户',
-    description: '创建一个新用户',
+    description: '创建一个新用户仅管理员权限',
   })
-  @ApiCreatedResponse({
+  @ApiResponse({
+    status: 201,
     description: 'The found record',
   })
   @Roles(Role.Admin)
-  create(@Body() createUser: CreateUserDto) {
-    return this.userService.create(createUser);
-  }
+  async create(@Body() createUser: CreateUserDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
 
-  @Post('register')
-  @ApiOperation({
-    summary: '注册账号',
-  })
-  register(@Body() createUser: CreateUserDto) {
-    return this.userService.create(createUser);
+    try {
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      // 管理员添加的用户默认密码是‘123456’
+      const user = await this.userService.create({ ...createUser, password: '123456' }, queryRunner);
+      await queryRunner.commitTransaction();
+      return ResultData.ok(user, '创建成功');
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      return ResultData.fail(error.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   @Get()
@@ -63,9 +54,9 @@ export class UserController {
     summary: '查询用户列表',
     description: '查询用户列表支持分页',
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
-  findAll(@Query() query: QueryUserDto) {
-    return this.userService.findAll(query);
+  @Roles(Role.Admin)
+  async findAll(@Query() query: QueryUserDto) {
+    return ResultData.ok(await this.userService.findAll(query));
   }
 
   @Get('details')
@@ -94,5 +85,15 @@ export class UserController {
   })
   remove(@Param('id') id: string) {
     return this.userService.remove(+id);
+  }
+
+  @Get('userInfo')
+  @ApiOperation({
+    summary: '查询登陆用户详情',
+    description: '查询登陆用户详情',
+  })
+  @ResCerated(UserInfo)
+  userInfo(@Req() req) {
+    return this.userService.getUserInfo(req.user.id);
   }
 }

@@ -1,12 +1,14 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { UserRole, Gender, Active } from 'src/types/user';
 
 @Entity('user', { schema: 'application' })
-export class User {
+export class UserEntities {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('varchar', { name: 'user_name', comment: '用户名', length: 25 })
-  userName: string;
+  @Column('varchar', { name: 'name', comment: '用户名', length: 25 })
+  name: string;
 
   @Column('varchar', { name: 'email', comment: '邮箱', length: 255 })
   email: string;
@@ -14,36 +16,33 @@ export class User {
   @Column('enum', {
     name: 'role',
     comment: '角色 0：管理员：1：普通用户',
-    enum: [0, 1],
-    default: () => '1',
+    enum: UserRole,
+    default: UserRole.USER,
   })
-  role: 0 | 1;
+  role: UserRole;
 
   @Column('enum', {
     name: 'gender',
     nullable: true,
     comment: '1：男；0：女',
-    enum: [0, 1],
+    enum: Gender,
   })
-  gender: 0 | 1 | null;
+  gender: Gender;
 
   @Column('enum', {
     name: 'isActive',
     nullable: true,
     comment: '1：启用；0：禁用',
-    enum: [0, 1],
-    default: () => '0',
+    enum: Active,
+    default: Active.ENABLE,
   })
-  isActive: 0 | 1;
+  isActive: Active;
 
-  @Column('smallint', { name: 'age', nullable: true, comment: '年龄' })
-  age: number | null;
-
-  @Column('datetime', { name: 'create_at', comment: '创建时间' })
+  @CreateDateColumn({ name: 'create_at', comment: '创建时间' })
   createAt: Date;
 
   @Column('bigint', { name: 'phone', nullable: true, comment: '手机号' })
-  phone: number | string | null;
+  phone: number | string;
 
   @Column('varchar', {
     name: 'avatars',
@@ -52,14 +51,6 @@ export class User {
     length: 255,
   })
   avatars: string | null;
-
-  @Column('varchar', {
-    name: 'name',
-    nullable: true,
-    comment: '真实姓名',
-    length: 25,
-  })
-  name: string | null;
 
   @Column('varchar', { name: 'password', comment: '密码', length: 255 })
   password: string;
