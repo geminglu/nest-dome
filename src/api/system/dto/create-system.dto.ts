@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength } from 'class-validator';
 import { SystemMenu, SystemMenuHidden } from 'src/types/user';
 
 export class CreateSystemDto {
@@ -8,20 +8,26 @@ export class CreateSystemDto {
   @IsString()
   type: SystemMenu;
 
-  @ApiProperty({ title: 'icon' })
-  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  @ApiPropertyOptional({ title: 'icon', description: '如果创建目录icon必填' })
+  @IsOptional()
   @IsString()
   icon: string;
 
-  @ApiPropertyOptional({ title: '路由名称', description: '如果是是菜单路由名称就必须存在' })
+  @ApiPropertyOptional({ title: '路由名称', description: '如果是是菜单路由名称就必须存在', maxLength: 10 })
+  @MaxLength(10)
+  @IsOptional()
+  @IsString()
   name: string;
 
   @ApiPropertyOptional()
-  pid: string;
+  @IsOptional()
+  @IsString()
+  pid?: string;
 
   @ApiPropertyOptional({ title: '是否隐藏菜单', enum: SystemMenuHidden })
   hidden: SystemMenuHidden;
 
+  @MaxLength(10)
   @ApiProperty({ title: 'title' })
   @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
   @IsString()
@@ -39,4 +45,17 @@ export class ResSystemMenuDto extends OmitType(CreateSystemDto, ['hidden']) {
   @ApiProperty({ title: 'createAt', required: true })
   @IsString()
   createAt: string;
+}
+
+export class patchSystemDto extends OmitType(CreateSystemDto, ['pid']) {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  type: SystemMenu;
+
+  @ApiPropertyOptional()
+  @MaxLength(10)
+  @IsOptional()
+  @IsString()
+  title: string;
 }

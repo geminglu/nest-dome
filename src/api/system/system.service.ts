@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { CreateSystemDto } from './dto/create-system.dto';
+import { CreateSystemDto, patchSystemDto } from './dto/create-system.dto';
 import { ResultData } from 'src/utils/result';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, Not } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SystemMenunNetities } from 'src/entities/systemMenun.etities';
 import { SystemMenuHidden } from 'src/types/user';
@@ -23,10 +23,11 @@ export class SystemService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
+      // 创建菜单时路由名称不能为空
+      if (body.type === 'menu' && !body.name) return ResultData.fail('创建菜单时路由名称不能为空');
       // 创建目录时icon不能为空
       if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
       // 如果body中存在pid 需要验证pid是否在表中存在
-
       const p = await this.SystemMenunRepository.findOne({ where: { id: body.pid } });
       if (!p) return ResultData.fail('pid不存在');
       const t = await this.SystemMenunRepository.findOne({ where: { title: body.title } });
@@ -45,6 +46,38 @@ export class SystemService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async editMenu(body: patchSystemDto, id: string) {
+    if (!id) return ResultData.fail('id不能为空');
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      // 创建菜单时路由名称不能为空
+      if (body.type === 'menu' && !body.name) return ResultData.fail('创建菜单时路由名称不能为空');
+      // 创建目录时icon不能为空
+      if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
+      const t = await this.SystemMenunRepository.findOne({ where: { title: body.title, id: Not(id) } });
+      if (t) return ResultData.fail('菜单标题不能重复');
+
+      const systemMenun = new SystemMenunNetities();
+      body.hidden && (systemMenun.hidden = body.hidden);
+      body.icon && (systemMenun.icon = body.icon);
+      body.name && (systemMenun.name = body.name);
+      body.title && (systemMenun.title = body.title);
+      const menu = await queryRunner.manager.update<SystemMenunNetities>(SystemMenunNetities, id, systemMenun);
+      await queryRunner.commitTransaction();
+      if (!menu.affected) return ResultData.fail('数据不存在');
+      return ResultData.ok();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
     }
   }
 }
