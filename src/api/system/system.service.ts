@@ -80,4 +80,24 @@ export class SystemService {
       await queryRunner.release();
     }
   }
+
+  async deleMenu(id: string) {
+    if (!id) return ResultData.fail('id不能为空');
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const result = await this.SystemMenunRepository.findOne({ where: { pid: id } });
+      if (result) return ResultData.fail('目录下存在数据不能删除');
+      const dele = await queryRunner.manager.delete(SystemMenunNetities, { id });
+      await queryRunner.commitTransaction();
+      if (!dele.affected) return ResultData.fail('数据不存在');
+      return ResultData.ok();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
