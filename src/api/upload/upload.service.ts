@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UpdateUploadDto } from './dto/update-upload.dto';
-import { UploadFile } from 'src/entities/uploadFile';
+import { UploadFile } from 'src/entities/uploadFile.entities';
 
 @Injectable()
 export class UploadService {

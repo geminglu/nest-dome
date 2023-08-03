@@ -8,7 +8,7 @@ import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response'
 import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
 import { ResultData } from 'src/utils/result';
-import { ResCerated } from 'src/utils/api.Response';
+import { ResCerated, ResSuccess } from 'src/utils/api.Response';
 
 @Controller({
   path: 'user',
@@ -26,10 +26,7 @@ export class UserController {
     summary: '创建用户',
     description: '创建一个新用户仅管理员权限',
   })
-  @ApiResponse({
-    status: 201,
-    description: 'The found record',
-  })
+  @ResSuccess(UserInfo)
   @Roles(Role.Admin)
   async create(@Body() createUser: CreateUserDto) {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -37,7 +34,6 @@ export class UserController {
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction();
-      // 管理员添加的用户默认密码是‘123456’
       const user = await this.userService.create({ ...createUser, password: '123456' }, queryRunner);
       await queryRunner.commitTransaction();
       return ResultData.ok(user, '创建成功');
@@ -80,11 +76,11 @@ export class UserController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: '删除用户列表',
-    description: '删除查询用户详情',
+    summary: '删除用户',
+    description: '删除用户',
   })
   remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+    return this.userService.remove(id);
   }
 
   @Get('userInfo')

@@ -5,11 +5,10 @@ import { RegisterUserDto } from '../auth/dto/auth.dto';
 import { QueryUserDto } from './dto/query-user-dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, EntityManager, TransactionOptions, DataSource, QueryRunner, Between } from 'typeorm';
+import { Repository, Like, DataSource, QueryRunner, Between, Not } from 'typeorm';
 import { UserEntities } from 'src/entities/user.entities';
 import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
-import { User } from 'temp/entities/User';
 
 @Injectable()
 export class UserService {
@@ -89,14 +88,52 @@ export class UserService {
     return ResultData.ok(userInfo);
   }
 
-  update(id: string, updateUser: UpdateUserDto) {
-    console.log(id, updateUser);
+  async update(id: string, user: UpdateUserDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    return `This action updates a #${id} user`;
+    try {
+      if (user.email) {
+        const u = await this.usersRepository.findOne({ where: { email: user.email, id: Not(id) } });
+        if (u) return ResultData.fail('邮箱不能重复');
+      }
+      const updateUser = new UserEntities();
+      user.avatars && (updateUser.avatars = user.avatars);
+      user.email && (updateUser.email = user.email);
+      user.gender ? (updateUser.gender = user.gender) : (updateUser.gender = null);
+      user.isActive && (updateUser.isActive = user.isActive);
+      user.name && (updateUser.name = user.name);
+      user.phone && (updateUser.phone = user.phone);
+      user.role && (updateUser.role = user.role);
+      const up = await queryRunner.manager.update<UserEntities>(UserEntities, id, updateUser);
+      await queryRunner.commitTransaction();
+      if (!up.affected) return ResultData.fail('数据不存在');
+      return ResultData.ok(user, '修改成功');
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      return ResultData.fail(error.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) {
+    if (!id) return ResultData.fail('id不能为空');
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const dele = await queryRunner.manager.delete(UserEntities, { id });
+      await queryRunner.commitTransaction();
+      if (!dele.affected) return ResultData.fail('数据不存在');
+      return ResultData.ok();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**

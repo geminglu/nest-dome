@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { diskStorage } from 'multer';
 import { join, extname } from 'path';
 import { v4 } from 'uuid';
-import { UploadFile } from 'src/entities/uploadFile';
+import { UploadFile } from 'src/entities/uploadFile.entities';
 
 @Module({
   imports: [

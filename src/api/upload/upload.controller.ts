@@ -4,16 +4,18 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { join } from 'path';
 import { UploadService } from './upload.service';
-import { ApiTags, ApiConsumes, ApiBody, ApiOAuth2, ApiParam, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiOperation } from '@nestjs/swagger';
 import { zip } from 'compressing';
 import { FileUploadDto } from './dto/create-upload.dto';
+import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response';
 
 @Controller({
   path: 'upload',
   version: '1',
 })
-@ApiOAuth2(['pets:write'])
 @ApiTags('上传和下载')
+@ResUnauthorized()
+@ResServerErrorResponse()
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 

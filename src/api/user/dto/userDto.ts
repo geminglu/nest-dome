@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType, OmitType } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
@@ -36,7 +36,7 @@ export class CreateUserDto {
     enum: Gender,
     description: '1：男；0：女',
   })
-  gender?: Gender;
+  gender?: Gender | null;
 
   @ApiProperty({
     title: '邮箱',
@@ -54,6 +54,7 @@ export class CreateUserDto {
   @ApiPropertyOptional({ title: '头像' })
   avatars?: string;
 
+  @IsOptional()
   @IsPhoneNumber('CN')
   @ApiPropertyOptional({ title: '手机号' })
   phone?: string;
@@ -69,9 +70,17 @@ export class CreateUserDto {
   @IsOptional()
   @ApiPropertyOptional({ title: '1：启用；0：禁用', enum: Active })
   isActive?: Active;
+
+  @ApiProperty({ title: '密码', required: true })
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  @IsString()
+  password: string;
 }
 
-export class UserInfo extends PartialType(CreateUserDto) {
+export class UserInfo extends PartialType(OmitType(CreateUserDto, ['password'])) {
   @ApiPropertyOptional({ title: '创建时间' })
   createAt: Date;
+
+  @ApiProperty()
+  id: string;
 }
