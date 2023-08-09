@@ -5,9 +5,12 @@ import {
   ApiInternalServerErrorResponse,
   ApiCreatedResponse,
   ApiUnauthorizedResponse,
-  refs,
+  ApiResponse,
 } from '@nestjs/swagger';
-import { SchemaObject, ReferenceObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import {
+  SchemaObject,
+  ReferenceObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 const baseTypeNames = ['String', 'Number', 'Boolean'];
 /**
@@ -97,7 +100,11 @@ export const SuccessResponse = <TModel extends Type<any>>(
  * @param isArray data 是否是数组
  * @param isPager 设置为 true, 则 data 类型为 { list, total, page, pageSize } , false data 类型是纯数组
  */
-export const ResSuccess = <TModel extends Type<any>>(model?: TModel, isArray?: boolean, isPager?: boolean) => {
+export const ResSuccess = <TModel extends Type<any>>(
+  model?: TModel,
+  isArray?: boolean,
+  isPager?: boolean,
+) => {
   return SuccessResponse(ApiOkResponse, model, isArray, isPager);
 };
 
@@ -107,7 +114,11 @@ export const ResSuccess = <TModel extends Type<any>>(model?: TModel, isArray?: b
  * @param isArray data 是否是数组
  * @param isPager 设置为 true, 则 data 类型为 { list, total, page, pageSize } , false data 类型是纯数组
  */
-export const ResCerated = <TModel extends Type<any>>(model?: TModel, isArray?: boolean, isPager?: boolean) => {
+export const ResCerated = <TModel extends Type<any>>(
+  model?: TModel,
+  isArray?: boolean,
+  isPager?: boolean,
+) => {
   return SuccessResponse(ApiCreatedResponse, model, isArray, isPager);
 };
 
@@ -163,4 +174,17 @@ export const ResUnauthorized = () => {
       },
     }),
   );
+};
+
+/**
+ * 响应stream
+ */
+export const ResStream = () => {
+  return ApiResponse({
+    status: 200,
+    description: '成功下载文件',
+    content: {
+      'application/octet-stream': {},
+    },
+  });
 };
