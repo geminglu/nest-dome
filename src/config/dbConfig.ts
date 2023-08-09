@@ -11,6 +11,6 @@ export default registerAs('database', () => ({
   logger: 'file',
   logging: true,
   autoLoadEntities: true,
-  synchronize: true,
+  synchronize: false,
   timezone: 'UTC',
 }));
