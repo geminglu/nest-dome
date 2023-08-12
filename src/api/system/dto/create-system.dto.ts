@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength, IsNumberString } from 'class-validator';
 import { SystemMenu, SystemMenuHidden } from 'src/types/user';
 
 export class CreateSystemDto {
@@ -32,6 +32,11 @@ export class CreateSystemDto {
   @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
   @IsString()
   title: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用' })
+  @IsNumberString()
+  status?: SystemMenuHidden;
 }
 
 export class ResSystemMenuDto extends OmitType(CreateSystemDto, ['hidden']) {

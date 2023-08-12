@@ -19,7 +19,7 @@ export class SystemMenunNetities {
   @Column('varchar', { name: 'pid', nullable: true, comment: 'pid' })
   pid: string;
 
-  @Column('enum', { name: 'hidden', enum: SystemMenuHidden, comment: 'hidden' })
+  @Column('enum', { name: 'hidden', enum: SystemMenuHidden, comment: '在系统菜单中隐藏' })
   hidden: SystemMenuHidden;
 
   @CreateDateColumn({ name: 'create_at' })
@@ -27,4 +27,7 @@ export class SystemMenunNetities {
 
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column('enum', { name: 'status', comment: '0:禁用；\n1:启用', enum: ['0', '1'] })
+  status: '0' | '1';
 }

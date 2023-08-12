@@ -13,7 +13,6 @@ import { ResSystemMenuDto, CreateSystemDto, patchSystemDto } from './dto/create-
 @ApiTags('system')
 @ApiBearerAuth()
 @ApiExtraModels(ResSystemMenuDto)
-@Roles(Role.Admin)
 @ResUnauthorized()
 @ResServerErrorResponse()
 export class SystemController {
@@ -31,6 +30,7 @@ export class SystemController {
   @ApiOperation({
     summary: '创建系统菜单',
   })
+  @Roles(Role.Admin)
   @Post('menu')
   @ResCerated(ResSystemMenuDto)
   cerateMenu(@Body() body: CreateSystemDto) {
@@ -40,8 +40,9 @@ export class SystemController {
   @ApiOperation({
     summary: '修改系统菜单',
   })
+  @Roles(Role.Admin)
   @Patch('menu/:id')
-  @ResSuccess()
+  @ResSuccess(ResSystemMenuDto)
   editMenu(@Body() body: patchSystemDto, @Param('id') path: string) {
     return this.systemService.editMenu(body, path);
   }
@@ -49,6 +50,7 @@ export class SystemController {
   @ApiOperation({
     summary: '删除系统菜单',
   })
+  @Roles(Role.Admin)
   @Delete('menu/:id')
   @ResSuccess()
   delMenu(@Param('id') path: string) {

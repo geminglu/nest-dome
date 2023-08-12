@@ -14,8 +14,8 @@ export class SystemService {
     private readonly SystemMenunRepository: Repository<SystemMenunNetities>,
   ) {}
 
-  async findMenu() {
-    return ResultData.ok(await this.SystemMenunRepository.find());
+  async findMenu(id?: string) {
+    return ResultData.ok(await this.SystemMenunRepository.find({ where: { id } }));
   }
 
   async cerateMenu(body: CreateSystemDto) {
@@ -40,6 +40,7 @@ export class SystemService {
       systemMenun.pid = body.pid || null;
       systemMenun.title = body.title;
       systemMenun.type = body.type;
+      systemMenun.status = body.status || '1';
       const systemMenunResult = await queryRunner.manager.save<SystemMenunNetities>(systemMenun);
       await queryRunner.commitTransaction();
       return ResultData.ok(systemMenunResult);
@@ -61,7 +62,9 @@ export class SystemService {
       if (body.type === 'menu' && !body.name) return ResultData.fail('创建菜单时路由名称不能为空');
       // 创建目录时icon不能为空
       if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
-      const t = await this.SystemMenunRepository.findOne({ where: { title: body.title, id: Not(id) } });
+      const t = await this.SystemMenunRepository.findOne({
+        where: { title: body.title, id: Not(id) },
+      });
       if (t) return ResultData.fail('菜单标题不能重复');
 
       const systemMenun = new SystemMenunNetities();
@@ -69,10 +72,20 @@ export class SystemService {
       body.icon && (systemMenun.icon = body.icon);
       body.name && (systemMenun.name = body.name);
       body.title && (systemMenun.title = body.title);
-      const menu = await queryRunner.manager.update<SystemMenunNetities>(SystemMenunNetities, id, systemMenun);
+      body.status && (systemMenun.status = body.status);
+      const menu = await queryRunner.manager.update<SystemMenunNetities>(
+        SystemMenunNetities,
+        id,
+        systemMenun,
+      );
+      console.log('menu', menu);
+
       await queryRunner.commitTransaction();
       if (!menu.affected) return ResultData.fail('数据不存在');
-      return ResultData.ok();
+      const menuRes = await this.SystemMenunRepository.findOne({
+        where: { id },
+      });
+      return ResultData.ok(menuRes);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(error.message);
