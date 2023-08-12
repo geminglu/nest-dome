@@ -18,6 +18,15 @@ export class SystemService {
     return ResultData.ok(await this.SystemMenunRepository.find({ where: { id } }));
   }
 
+  /**
+   * 查询用户授权的菜单
+   * @param id 用户ID
+   */
+  async getPermissionMenu(id: string) {
+    // TODO 后期会根据用角色做过滤
+    return ResultData.ok(await this.SystemMenunRepository.find({ where: { status: '1' } }));
+  }
+
   async cerateMenu(body: CreateSystemDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

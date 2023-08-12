@@ -1,4 +1,4 @@
-import { Controller, Get, Body, Post, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Body, Post, Patch, Param, Delete, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiExtraModels, ApiBearerAuth } from '@nestjs/swagger';
 import { SystemService } from './system.service';
 import { Roles, Role } from 'src/decorators/roles.decorator';
@@ -19,8 +19,19 @@ export class SystemController {
   constructor(private readonly systemService: SystemService) {}
 
   @ApiOperation({
+    summary: '获取权限菜单',
+    description: '只能获取到当前用户授权访问的菜单',
+  })
+  @Get('permissionMenu')
+  @ResSuccess(ResSystemMenuDto, true)
+  getPermissionMenu(@Req() req) {
+    return this.systemService.getPermissionMenu(req.user.id);
+  }
+
+  @ApiOperation({
     summary: '获取系统菜单',
   })
+  @Roles(Role.Admin)
   @Get('menu')
   @ResSuccess(ResSystemMenuDto, true)
   getMenu() {
