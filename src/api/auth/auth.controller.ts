@@ -1,9 +1,17 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiOperation, ApiExtraModels } from '@nestjs/swagger';
+import * as UAParser from 'ua-parser-js';
 import { Public } from '../../decorators/public.decorator';
 import { AuthService } from './auth.service';
-import { LoginDto, CreateTokenDto, RegisterUserDto, CaptchaDto, CaptchaResultDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  CreateTokenDto,
+  RegisterUserDto,
+  CaptchaDto,
+  CaptchaResultDto,
+} from './dto/auth.dto';
 import { ResSuccess, ResServerErrorResponse } from 'src/utils/api.Response';
 
 @Controller({
@@ -23,8 +31,14 @@ export class AuthController {
   })
   @Post('login')
   @ResSuccess(CreateTokenDto)
-  async login(@Body() body: LoginDto) {
-    return this.authService.signIn(body);
+  async login(@Body() body: LoginDto, @Req() request: Request) {
+    const forwardedFor = request.headers['x-forwarded-for'] as string;
+    const remoteAddress = request.socket.remoteAddress;
+    const ip = forwardedFor ? forwardedFor.split(',')[0] : remoteAddress.split(':').pop();
+    const userAgent = request.headers['user-agent'];
+    const parser = new UAParser();
+    const deviceInfo = JSON.stringify(parser.setUA(userAgent).getResult());
+    return this.authService.signIn(body, { ip, deviceInfo });
   }
 
   @Post('register')

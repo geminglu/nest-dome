@@ -10,6 +10,7 @@ import { validPhone, validEmail } from 'src/utils/validate';
 import { UserService } from '../user/user.service';
 import { ResultData } from 'src/utils/result';
 import { UserEntities } from 'src/entities/user.entities';
+import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import {
   RegisterUserDto,
   PayloadTokenDto,
@@ -28,6 +29,8 @@ export class AuthService {
   constructor(
     @InjectRepository(GraphicCodeNetities)
     private readonly GraphicCodeRepository: Repository<GraphicCodeNetities>,
+    @InjectRepository(LoginLogNetities)
+    private readonly LoginLogRepository: Repository<LoginLogNetities>,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
@@ -40,7 +43,7 @@ export class AuthService {
    * @param pass 密码
    * @returns
    */
-  async signIn(login: LoginDto) {
+  async signIn(login: LoginDto, device: { ip: string; deviceInfo: string }) {
     /**
      * 1: 验证图形验证码
      * 2: 解密
@@ -54,11 +57,16 @@ export class AuthService {
     const graphicCode = await this.GraphicCodeRepository.findOne({
       where: {
         id: login.captchaId,
-        createAt: MoreThan(new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME))),
+        createAt: MoreThan(
+          new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME)),
+        ),
       },
     });
 
-    if (!graphicCode || graphicCode.code.toLocaleLowerCase() !== login.captchaCode.toLocaleLowerCase()) {
+    if (
+      !graphicCode ||
+      graphicCode.code.toLocaleLowerCase() !== login.captchaCode.toLocaleLowerCase()
+    ) {
       return ResultData.fail('验证错误');
     }
 
@@ -88,7 +96,31 @@ export class AuthService {
       return ResultData.fail('账号或密码错误');
     }
 
-    return ResultData.ok(await this.generateToken({ username: user.name, id: user.id }), '登陆成功');
+    const result = await this.generateToken({ username: user.name, id: user.id });
+    this.addLoginLog(user.id, device);
+    return ResultData.ok(result, '登陆成功');
+  }
+
+  /**
+   * 创建登陆记录
+   */
+  async addLoginLog(uid: string, info: { ip: string; deviceInfo: string }) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const LoginLog = new LoginLogNetities();
+      LoginLog.uid = uid;
+      LoginLog.loginIp = info.ip;
+      LoginLog.deviceInfo = info.deviceInfo;
+      await queryRunner.manager.save<LoginLogNetities>(LoginLog);
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**

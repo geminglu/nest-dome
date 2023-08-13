@@ -9,10 +9,11 @@ import { UserModule } from 'src/api/user/user.module';
 import { AuthController } from './auth.controller';
 import { RolesGuard } from 'src/guard/auth/roles';
 import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
+import { LoginLogNetities } from 'src/entities/loginLog.netities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GraphicCodeNetities]),
+    TypeOrmModule.forFeature([GraphicCodeNetities, LoginLogNetities]),
     UserModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
