@@ -47,16 +47,8 @@ export const SuccessResponse = <TModel extends Type<any>>(
           type: 'number',
           default: 0,
         },
-        page: {
-          type: 'number',
-          default: 1,
-        },
-        pageSize: {
-          type: 'number',
-          default: 10,
-        },
       },
-      required: ['list', 'total', 'page', 'pageSize'],
+      required: ['list', 'total'],
     };
   } else if (isArray) {
     prop = {

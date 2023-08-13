@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('login_log', { schema: 'application' })
 export class LoginLogNetities {
+  @ApiProperty({ description: 'ID' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

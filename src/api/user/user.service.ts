@@ -9,12 +9,16 @@ import { Repository, Like, DataSource, QueryRunner, Between, Not } from 'typeorm
 import { UserEntities } from 'src/entities/user.entities';
 import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
+import { LoginLogNetities } from 'src/entities/loginLog.netities';
+import { QueryLogInLog } from 'src/dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(UserEntities)
     private usersRepository: Repository<UserEntities>,
+    @InjectRepository(LoginLogNetities)
+    private LoginLogRepository: Repository<LoginLogNetities>,
     private dataSource: DataSource,
   ) {}
 
@@ -60,7 +64,10 @@ export class UserService {
           email: res.email && Like(`%${res.email}%`),
           role: res.role,
           isActive: res.isActive,
-          createAt: Between<Date>(new Date(res.createTimeStart || 0), new Date(res.createTimeEnd || Date.now())),
+          createAt: Between<Date>(
+            new Date(res.createTimeStart || 0),
+            new Date(res.createTimeEnd || Date.now()),
+          ),
         },
         skip: (skip - 1) * skip,
         take,
@@ -177,5 +184,33 @@ export class UserService {
       return '手机号已存在';
     }
     return null;
+  }
+
+  /**
+   * 查询登陆日志
+   * @param uid 用户ID
+   */
+  async getLogInLog(query: QueryLogInLog, uid?: string) {
+    const { page, pageSize } = query;
+    let take: number;
+    let skip: number;
+    if (page && pageSize) {
+      take = pageSize <= 0 ? 1 : pageSize;
+      skip = ((page <= 0 ? 1 : page) - 1) * take;
+    } else {
+      take = undefined;
+      skip = undefined;
+    }
+
+    const [timbers, timbersCount] = await this.LoginLogRepository.findAndCount({
+      where: { uid },
+      order: { loginTime: 'DESC' },
+      skip,
+      take,
+    });
+    return ResultData.ok({
+      list: timbers,
+      total: timbersCount,
+    });
   }
 }

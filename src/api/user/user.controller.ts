@@ -9,6 +9,9 @@ import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
 import { ResultData } from 'src/utils/result';
 import { ResCerated, ResSuccess } from 'src/utils/api.Response';
+import { LoginLogNetities } from 'src/entities/loginLog.netities';
+import { QueryLogInLog } from 'src/dto';
+import { query } from 'express';
 
 @Controller({
   path: 'user',
@@ -17,7 +20,7 @@ import { ResCerated, ResSuccess } from 'src/utils/api.Response';
 @ApiTags('用户')
 @ResUnauthorized()
 @ResServerErrorResponse()
-@ApiExtraModels(UserInfo)
+@ApiExtraModels(UserInfo, LoginLogNetities)
 export class UserController {
   constructor(private readonly userService: UserService, private dataSource: DataSource) {}
 
@@ -34,7 +37,10 @@ export class UserController {
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction();
-      const user = await this.userService.create({ ...createUser, password: '123456' }, queryRunner);
+      const user = await this.userService.create(
+        { ...createUser, password: '123456' },
+        queryRunner,
+      );
       await queryRunner.commitTransaction();
       return ResultData.ok(user, '创建成功');
     } catch (error) {
@@ -91,5 +97,24 @@ export class UserController {
   @ResCerated(UserInfo)
   userInfo(@Req() req) {
     return this.userService.getUserInfo(req.user.id);
+  }
+
+  @Get('getLoginLog')
+  @ApiOperation({
+    summary: '查询当前登陆用户的登陆日志',
+  })
+  @ResSuccess(LoginLogNetities, true, true)
+  logInLog(@Query() query: QueryLogInLog, @Req() req) {
+    return this.userService.getLogInLog(query, req.user.id);
+  }
+
+  @Get('getLoginLogs')
+  @ApiOperation({
+    summary: '查询所以用户的登陆日志',
+  })
+  @Roles(Role.Admin)
+  @ResSuccess(LoginLogNetities, true, true)
+  logInLogs(@Query() query: QueryLogInLog) {
+    return this.userService.getLogInLog(query);
   }
 }
