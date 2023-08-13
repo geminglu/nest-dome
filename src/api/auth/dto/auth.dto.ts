@@ -40,6 +40,10 @@ export class CreateTokenDto {
   refresh_token: string;
 }
 
+export class RefreshTokenDto extends PickType(CreateTokenDto, ['refresh_token']) {}
+
+export class AccessTokenDto extends PickType(CreateTokenDto, ['access_token']) {}
+
 export class PayloadTokenDto {
   username: string;
   id: string;

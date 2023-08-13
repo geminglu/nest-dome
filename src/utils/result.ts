@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class ResultData {
   constructor(success = true, message?: string, data?: any) {
     this.message = message || '';
-    this.data = data || null;
+    this.data = data ?? null;
     this.success = success;
   }
 

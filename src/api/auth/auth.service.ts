@@ -18,6 +18,8 @@ import {
   CaptchaDto,
   LoginDto,
   CaptchaResultDto,
+  RefreshTokenDto,
+  AccessTokenDto,
 } from './dto/auth.dto';
 import { CreateUserDto } from '../user/dto/userDto';
 import { Active } from 'src/types/user';
@@ -171,13 +173,19 @@ export class AuthService {
     };
   }
 
-  async refreshToken(token: CreateTokenDto) {
-    const refresh = await this.jwtService.verifyAsync(token.refresh_token, {
-      secret: process.env.SECRET,
-    });
-    if (refresh.type !== 'refresh_token') throw new BadRequestException('refresh_token无效');
+  async refreshToken(token: RefreshTokenDto) {
+    let refresh;
+    try {
+      console.log(token.refresh_token);
+      refresh = await this.jwtService.verifyAsync(token.refresh_token, {
+        secret: process.env.SECRET,
+      });
+    } catch (error) {
+      return ResultData.fail(error.message);
+    }
+    if (refresh.type !== 'refresh_token') return ResultData.fail('refresh_token无效');
     const user = await this.userService.findOne(refresh.id);
-    return this.generateToken({ id: user.id, username: user.name });
+    return ResultData.ok(await this.generateToken({ id: user.id, username: user.name }));
   }
 
   /**
@@ -241,6 +249,22 @@ export class AuthService {
       throw new Error(error.message);
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  /**
+   * 验证accessToken是否有效
+   * @param token accessToken
+   * @returns Boolean
+   */
+  async verifyToekn(token: string) {
+    try {
+      await this.jwtService.verifyAsync(token, {
+        secret: process.env.SECRET,
+      });
+      return true;
+    } catch (error) {
+      return false;
     }
   }
 }

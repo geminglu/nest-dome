@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, HttpCode } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiOperation, ApiExtraModels } from '@nestjs/swagger';
@@ -11,15 +11,18 @@ import {
   RegisterUserDto,
   CaptchaDto,
   CaptchaResultDto,
+  AccessTokenDto,
+  RefreshTokenDto,
 } from './dto/auth.dto';
 import { ResSuccess, ResServerErrorResponse } from 'src/utils/api.Response';
+import { ResultData } from 'src/utils/result';
 
 @Controller({
   path: 'auth',
   version: '1',
 })
 @ApiTags('auth')
-@ApiExtraModels(CaptchaResultDto)
+@ApiExtraModels(CaptchaResultDto, CreateTokenDto)
 @Public()
 @ResServerErrorResponse()
 export class AuthController {
@@ -56,7 +59,7 @@ export class AuthController {
     summary: '刷新token',
   })
   @ResSuccess(CreateTokenDto)
-  refreshToekn(@Body() token: CreateTokenDto) {
+  refreshToekn(@Body() token: RefreshTokenDto) {
     return this.authService.refreshToken(token);
   }
 
@@ -78,5 +81,15 @@ export class AuthController {
   @ResSuccess(CaptchaResultDto)
   getCaptcha(@Body() Body: CaptchaDto) {
     return this.authService.genderCaptcha(Body);
+  }
+
+  @Post('verifyToekn')
+  @ApiOperation({
+    summary: '验证accessToken是否有效',
+  })
+  @HttpCode(200)
+  @ResSuccess(Boolean)
+  async verifyToekn(@Body() token: AccessTokenDto) {
+    return ResultData.ok(await this.authService.verifyToekn(token.access_token));
   }
 }
