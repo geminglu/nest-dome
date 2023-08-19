@@ -2,14 +2,13 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req } from '@
 import { UserService } from './user.service';
 import { CreateUserDto, UserInfo } from './dto/userDto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { QueryUserDto } from './dto/query-user-dto';
+import { QueryUserDto, LoginLogReqDto } from './dto/query-user-dto';
 import { ApiOperation, ApiParam, ApiTags, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response';
 import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
 import { ResultData } from 'src/utils/result';
 import { ResCerated, ResSuccess } from 'src/utils/api.Response';
-import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import { QueryLogInLog } from 'src/dto';
 import { query } from 'express';
 
@@ -20,9 +19,12 @@ import { query } from 'express';
 @ApiTags('用户')
 @ResUnauthorized()
 @ResServerErrorResponse()
-@ApiExtraModels(UserInfo, LoginLogNetities)
+@ApiExtraModels(UserInfo, LoginLogReqDto)
 export class UserController {
-  constructor(private readonly userService: UserService, private dataSource: DataSource) {}
+  constructor(
+    private readonly userService: UserService,
+    private dataSource: DataSource,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -103,7 +105,7 @@ export class UserController {
   @ApiOperation({
     summary: '查询当前登陆用户的登陆日志',
   })
-  @ResSuccess(LoginLogNetities, true, true)
+  @ResSuccess(LoginLogReqDto, true, true)
   logInLog(@Query() query: QueryLogInLog, @Req() req) {
     return this.userService.getLogInLog(query, req.user.id);
   }
@@ -113,7 +115,7 @@ export class UserController {
     summary: '查询所以用户的登陆日志',
   })
   @Roles(Role.Admin)
-  @ResSuccess(LoginLogNetities, true, true)
+  @ResSuccess(LoginLogReqDto, true, true)
   logInLogs(@Query() query: QueryLogInLog) {
     return this.userService.getLogInLog(query);
   }

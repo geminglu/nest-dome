@@ -6,6 +6,7 @@ import { generateKeyPairSync } from 'crypto';
 import { DataSource, Repository, MoreThan } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { create } from 'svg-captcha';
+import axios from 'axios';
 import { validPhone, validEmail } from 'src/utils/validate';
 import { UserService } from '../user/user.service';
 import { ResultData } from 'src/utils/result';
@@ -111,10 +112,14 @@ export class AuthService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
+      const { country, prov, city, district } =
+        (await axios.get(`https://qifu-api.baidubce.com/ip/geo/v1/district?ip=139.227.71.130`)).data
+          ?.data || {};
       const LoginLog = new LoginLogNetities();
       LoginLog.uid = uid;
       LoginLog.loginIp = info.ip;
       LoginLog.deviceInfo = info.deviceInfo;
+      LoginLog.location = `${country}/${prov}/${city}/${district}`;
       await queryRunner.manager.save<LoginLogNetities>(LoginLog);
       await queryRunner.commitTransaction();
     } catch (error) {

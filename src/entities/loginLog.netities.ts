@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('login_log', { schema: 'application' })
@@ -23,6 +23,14 @@ export class LoginLogNetities {
     length: 500,
   })
   deviceInfo: string | null;
+
+  @ApiProperty({ description: '位置' })
+  @Column('varchar', {
+    name: 'location',
+    comment: '位置',
+    length: 500,
+  })
+  location: string;
 
   @ApiProperty({ description: '登陆时间' })
   @Column('datetime', {

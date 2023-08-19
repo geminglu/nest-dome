@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import axios from 'axios';
 import { CreateUserDto } from './dto/userDto';
 import { RegisterUserDto } from '../auth/dto/auth.dto';
 import { QueryUserDto } from './dto/query-user-dto';
@@ -11,6 +12,7 @@ import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import { QueryLogInLog } from 'src/dto';
+import { log } from 'console';
 
 @Injectable()
 export class UserService {
@@ -202,14 +204,25 @@ export class UserService {
       skip = undefined;
     }
 
-    const [timbers, timbersCount] = await this.LoginLogRepository.findAndCount({
-      where: { uid },
-      order: { loginTime: 'DESC' },
-      skip,
-      take,
-    });
+    const builder = this.LoginLogRepository.createQueryBuilder('loginLog')
+      .leftJoinAndMapOne('loginLog.user', UserEntities, 'user', 'user.id = loginLog.uid')
+      .select('loginLog.*, user.name as userName')
+      .where(uid ? 'loginLog.uid = :uid' : '1=1', { uid })
+      .skip(skip)
+      .take(take)
+      .orderBy('loginLog.loginTime', 'DESC');
+
+    const [timbers, timbersCount] = await Promise.all([builder.getRawMany(), builder.getCount()]);
+
+    const list = timbers.map((i) => ({
+      deviceInfo: i.device_info,
+      loginTime: i.login_time,
+      userName: i.userName,
+      location: i.location,
+    }));
+
     return ResultData.ok({
-      list: timbers,
+      list,
       total: timbersCount,
     });
   }

@@ -10,6 +10,7 @@ import {
   IsNumberString,
 } from 'class-validator';
 import { OmitType } from '@nestjs/mapped-types';
+import { LoginLogNetities } from 'src/entities/loginLog.netities';
 
 import { UserRole, Gender, Active } from 'src/types/user';
 
@@ -70,4 +71,9 @@ export class QueryUserDto {
   @IsOptional()
   @ApiProperty({ description: '创建时间结束', required: false })
   createTimeEnd: string;
+}
+
+export class LoginLogReqDto extends LoginLogNetities {
+  @ApiProperty({ description: '用户名' })
+  userName: string;
 }
