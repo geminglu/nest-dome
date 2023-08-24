@@ -2,10 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Repository } from 'typeorm';
-import { UpdateUploadDto } from './dto/update-upload.dto';
 import { UploadFile } from 'src/entities/uploadFile.entities';
 import { ResultData } from 'src/utils/result';
-import { v4 } from 'uuid';
 
 @Injectable()
 export class UploadService {
@@ -20,7 +18,7 @@ export class UploadService {
    * @param {Express.Multer.File} file
    * @param {string} uid 上传文件人的用户ID
    */
-  async addFile(file: Express.Multer.File, uid: string) {
+  async addFile(file: Express.Multer.File, uid?: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -36,7 +34,7 @@ export class UploadService {
 
       const fileInfo = await queryRunner.manager.save<UploadFile>(uploadFile);
       await queryRunner.commitTransaction();
-      return ResultData.ok(fileInfo, '上传成功');
+      return fileInfo;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new Error(error.message);

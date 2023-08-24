@@ -3,13 +3,13 @@ import { VersioningType, Logger, ValidationPipe } from '@nestjs/common';
 import * as cors from 'cors';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 import { SwaggerModule, DocumentBuilder, SwaggerDocumentOptions } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
 import { ResInterception } from 'src/common/response';
 import { HttpFilter, ExcepFilter } from 'src/common/filter';
 import winstonLogger from 'src/common/logger';
 import loggerMiddleware from 'src/middleware/logger';
+import { STATIC_PATH, STATIC_UP_PATH } from './utils/constant';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -23,8 +23,8 @@ async function bootstrap() {
   app.enableVersioning({
     type: VersioningType.URI,
   });
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads',
+  app.useStaticAssets(STATIC_UP_PATH, {
+    prefix: STATIC_PATH,
   });
   // 全局守卫
   // app.useGlobalGuards(new AuthGuard());
