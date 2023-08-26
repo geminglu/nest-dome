@@ -1,10 +1,12 @@
-import { Module, Logger, Dependencies } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MailerModule } from '@nestjs-modules/mailer';
 import dsConfig from 'src/config/dbConfig';
+import emailConfig from './config/emailConfig';
 import { UserModule } from './api/user/user.module';
 import { UploadModule } from './api/upload/upload.module';
 import { AuthModule } from './api/auth/auth.module';
@@ -15,7 +17,7 @@ import { SystemModule } from './api/system/system.module';
     ConfigModule.forRoot({
       envFilePath: ['.env.local', `.env.${process.env.NODE_ENV}`],
       isGlobal: true,
-      load: [dsConfig],
+      load: [emailConfig, dsConfig],
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
@@ -25,6 +27,11 @@ import { SystemModule } from './api/system/system.module';
           ...(await ConfigService.get('database')),
         };
       },
+      inject: [ConfigService],
+    }),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (ConfigService: ConfigService) => await ConfigService.get('emailConfig'),
       inject: [ConfigService],
     }),
     UploadModule,

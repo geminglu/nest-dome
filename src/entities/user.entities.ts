@@ -19,7 +19,7 @@ export class UserEntities {
     enum: UserRole,
     default: UserRole.USER,
   })
-  role: UserRole;
+  role?: UserRole;
 
   @Column('enum', {
     name: 'gender',
@@ -27,7 +27,7 @@ export class UserEntities {
     comment: '1：男；0：女',
     enum: Gender,
   })
-  gender: Gender;
+  gender?: Gender;
 
   @Column('enum', {
     name: 'isActive',
@@ -36,13 +36,13 @@ export class UserEntities {
     enum: Active,
     default: Active.ENABLE,
   })
-  isActive: Active;
+  isActive?: Active;
 
   @CreateDateColumn({ name: 'create_at', comment: '创建时间' })
   createAt: Date;
 
   @Column('bigint', { name: 'phone', nullable: true, comment: '手机号' })
-  phone: number | string;
+  phone?: number | string;
 
   @Column('varchar', {
     name: 'avatars',
@@ -50,7 +50,7 @@ export class UserEntities {
     comment: '用户头像',
     length: 255,
   })
-  avatars: string | null;
+  avatars?: string | null;
 
   @Column('varchar', { name: 'password', comment: '密码', length: 255 })
   password: string;

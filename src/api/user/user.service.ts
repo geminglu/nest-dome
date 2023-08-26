@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import axios from 'axios';
-import { CreateUserDto } from './dto/userDto';
-import { RegisterUserDto } from '../auth/dto/auth.dto';
 import { QueryUserDto } from './dto/query-user-dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,7 +9,6 @@ import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import { QueryLogInLog } from 'src/dto';
-import { log } from 'console';
 
 @Injectable()
 export class UserService {
@@ -30,7 +26,7 @@ export class UserService {
    * @param transaction 事务
    * @returns
    */
-  async create(createUser: CreateUserDto & RegisterUserDto, queryRunner: QueryRunner) {
+  async create(createUser: Omit<UserEntities, 'id' | 'createAt'>, queryRunner: QueryRunner) {
     // 创建之前先判断用户名，邮箱和手机号是否存在
     const verify = await this.verifyIsCreateUser(createUser);
     if (verify) {
@@ -175,14 +171,14 @@ export class UserService {
     return this.usersRepository.findOne({ where: { phone } });
   }
 
-  async verifyIsCreateUser(userInfo: CreateUserDto) {
+  async verifyIsCreateUser(userInfo: Partial<UserEntities>) {
     if (await this.findUserName(userInfo.name)) {
       return '用户名已存在';
     }
     if (await this.findEmail(userInfo.email)) {
       return '邮箱已存在';
     }
-    if (await this.findPhone(userInfo.phone)) {
+    if (await this.findPhone(userInfo.phone as string)) {
       return '手机号已存在';
     }
     return null;

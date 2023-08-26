@@ -3,6 +3,8 @@ import { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiOperation, ApiExtraModels } from '@nestjs/swagger';
 import * as UAParser from 'ua-parser-js';
+import { Repository, DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Public } from '../../decorators/public.decorator';
 import { AuthService } from './auth.service';
 import {
@@ -13,9 +15,11 @@ import {
   CaptchaResultDto,
   AccessTokenDto,
   RefreshTokenDto,
+  GeneEmailCodeDto,
 } from './dto/auth.dto';
 import { ResSuccess, ResServerErrorResponse } from 'src/utils/api.Response';
 import { ResultData } from 'src/utils/result';
+import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
 
 @Controller({
   path: 'auth',
@@ -26,7 +30,12 @@ import { ResultData } from 'src/utils/result';
 @Public()
 @ResServerErrorResponse()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    @InjectRepository(GraphicCodeNetities)
+    private readonly GraphicCodeRepository: Repository<GraphicCodeNetities>,
+    private dataSource: DataSource,
+  ) {}
 
   @ApiOperation({
     summary: '用户登陆',
@@ -91,5 +100,34 @@ export class AuthController {
   @ResSuccess(Boolean)
   async verifyToekn(@Body() token: AccessTokenDto) {
     return ResultData.ok(await this.authService.verifyToekn(token.access_token));
+  }
+
+  @Post('generateEmailCode')
+  @ApiOperation({
+    summary: '获取邮箱验证码',
+  })
+  @HttpCode(200)
+  @ResSuccess(String)
+  async generateEmailCode(@Body() body: GeneEmailCodeDto) {
+    // 生成随机数
+    const randomStr = Math.random().toString(36).slice(-4);
+
+    await this.authService.senEmailCode(body.email, randomStr);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const graphicCode = new GraphicCodeNetities();
+      graphicCode.code = randomStr;
+      const graphic = await queryRunner.manager.save<GraphicCodeNetities>(graphicCode);
+
+      return ResultData.ok(graphic.id, '发送成功请在邮箱中查看');
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new Error(error.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

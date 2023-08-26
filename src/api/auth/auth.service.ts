@@ -7,6 +7,8 @@ import { DataSource, Repository, MoreThan } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { create } from 'svg-captcha';
 import axios from 'axios';
+import { MailerService } from '@nestjs-modules/mailer';
+import { createTransport } from 'nodemailer';
 import { validPhone, validEmail } from 'src/utils/validate';
 import { UserService } from '../user/user.service';
 import { ResultData } from 'src/utils/result';
@@ -20,9 +22,7 @@ import {
   LoginDto,
   CaptchaResultDto,
   RefreshTokenDto,
-  AccessTokenDto,
 } from './dto/auth.dto';
-import { CreateUserDto } from '../user/dto/userDto';
 import { Active } from 'src/types/user';
 import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
 import NodeRSA = require('node-rsa');
@@ -38,6 +38,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private dataSource: DataSource,
+    private readonly mailerService: MailerService,
   ) {}
 
   /**
@@ -134,11 +135,28 @@ export class AuthService {
    * 注册用户
    */
   async register(registerUser: RegisterUserDto) {
+    // 验证邮箱验证码
+    const graphicCode = await this.GraphicCodeRepository.findOne({
+      where: {
+        id: registerUser.codeId,
+        createAt: MoreThan(
+          new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME)),
+        ),
+      },
+    });
+
+    if (
+      !graphicCode ||
+      graphicCode.code.toLocaleLowerCase() !== registerUser.verifyCode.toLocaleLowerCase()
+    ) {
+      return ResultData.fail('验证错误');
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const param: CreateUserDto & RegisterUserDto = {
+      const param = {
         password: registerUser.password,
         name: registerUser.name,
         email: registerUser.email,
@@ -271,5 +289,24 @@ export class AuthService {
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * 验证码邮件发送
+   * @param {string} toEmail 接受端的邮箱
+   */
+  async senEmailCode(toEmail: string, code: string) {
+    await this.mailerService.sendMail({
+      to: toEmail,
+      subject: '您的验证码',
+      html: `<html><body>
+        <p><a href="mailto:${toEmail}">${toEmail}</a>您好！</p>
+        <p>我们已经收到您要求获取的一次性验证码</p>
+        <p>您的验证码为：<b>${code}</b> 有效时间5分钟</p>
+        <p>如果您没有要求获取一次性验证码请忽略这封邮件</p>
+        <p>谢谢！</p>
+        <p>测试邮件</>
+      </body></html>`,
+    });
   }
 }

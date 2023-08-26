@@ -1,5 +1,5 @@
 import { ApiProperty, PickType, ApiPropertyOptional, ApiExtraModels } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
 import { CreateUserDto } from 'src/api/user/dto/userDto';
 
 export class LoginDto {
@@ -23,9 +23,19 @@ export class LoginDto {
 
 export class RegisterUserDto extends PickType(CreateUserDto, ['email', 'name']) {
   @ApiProperty({ title: '密码', required: true })
-  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
   @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
   password: string;
+
+  @ApiProperty({ title: '邮箱验证码', required: true })
+  @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  verifyCode: string;
+
+  @ApiProperty({ title: '验证码ID', required: true })
+  @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  codeId: string;
 }
 
 export class CreateTokenDto {
@@ -75,4 +85,11 @@ export class CaptchaResultDto {
   @ApiPropertyOptional()
   @ApiProperty({ description: 'code' })
   code: string;
+}
+
+export class GeneEmailCodeDto {
+  @ApiProperty({ title: '邮箱', required: true })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  email: string;
 }
