@@ -2,6 +2,10 @@ import { ApiProperty, PickType, ApiPropertyOptional, ApiExtraModels } from '@nes
 import { IsString, IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
 import { CreateUserDto } from 'src/api/user/dto/userDto';
 
+export enum verifyType {
+  UPEMAIL = 'UPEMAIL',
+}
+
 export class LoginDto {
   @ApiProperty({ description: '邮箱/用户名/手机号' })
   @IsNotEmpty({ message: '账号不能为空' })
@@ -92,4 +96,21 @@ export class GeneEmailCodeDto {
   @IsEmail({}, { message: '邮箱格式不正确' })
   @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
   email: string;
+}
+
+export class verifyEmailCodeDto {
+  @ApiProperty({ title: '邮箱验证码', required: true })
+  @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  verifyCode: string;
+
+  @ApiProperty({ title: '验证码ID', required: true })
+  @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  codeId: string;
+
+  @ApiProperty({ title: '业务类型', required: true, enum: verifyType })
+  @IsString()
+  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
+  type: verifyType;
 }

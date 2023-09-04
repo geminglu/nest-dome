@@ -58,20 +58,10 @@ export class AuthService {
      */
 
     // 验证图形验证码
-    const graphicCode = await this.GraphicCodeRepository.findOne({
-      where: {
-        id: login.captchaId,
-        createAt: MoreThan(
-          new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME)),
-        ),
-      },
-    });
-
-    if (
-      !graphicCode ||
-      graphicCode.code.toLocaleLowerCase() !== login.captchaCode.toLocaleLowerCase()
-    ) {
-      return ResultData.fail('验证错误');
+    try {
+      await this.verifyCode(login.captchaCode, login.captchaId);
+    } catch (error) {
+      return ResultData.fail(error.message || '验证失败');
     }
 
     // 解密
@@ -136,20 +126,10 @@ export class AuthService {
    */
   async register(registerUser: RegisterUserDto) {
     // 验证邮箱验证码
-    const graphicCode = await this.GraphicCodeRepository.findOne({
-      where: {
-        id: registerUser.codeId,
-        createAt: MoreThan(
-          new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME)),
-        ),
-      },
-    });
-
-    if (
-      !graphicCode ||
-      graphicCode.code.toLocaleLowerCase() !== registerUser.verifyCode.toLocaleLowerCase()
-    ) {
-      return ResultData.fail('验证错误');
+    try {
+      await this.verifyCode(registerUser.verifyCode, registerUser.codeId);
+    } catch (error) {
+      return ResultData.fail(error.message || '验证失败');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -201,7 +181,7 @@ export class AuthService {
     try {
       console.log(token.refresh_token);
       refresh = await this.jwtService.verifyAsync(token.refresh_token, {
-        secret: process.env.SECRET,
+        secret: this.config.get('config.secret'),
       });
     } catch (error) {
       return ResultData.fail(error.message);
@@ -283,7 +263,7 @@ export class AuthService {
   async verifyToekn(token: string) {
     try {
       await this.jwtService.verifyAsync(token, {
-        secret: process.env.SECRET,
+        secret: this.config.get('config.secret'),
       });
       return true;
     } catch (error) {
@@ -308,5 +288,29 @@ export class AuthService {
         <p>测试邮件</>
       </body></html>`,
     });
+  }
+
+  async verifyCode(verifyCode: string, codeId: string) {
+    // 验证邮箱验证码
+    const graphicCode = await this.GraphicCodeRepository.findOne({
+      where: {
+        id: codeId,
+        createAt: MoreThan(
+          new Date(new Date().getTime() - Number(process.env.GRAPHIC_EXPIRATION_TIME)),
+        ),
+      },
+    });
+
+    if (!graphicCode || graphicCode.code.toLocaleLowerCase() !== verifyCode.toLocaleLowerCase()) {
+      throw new Error('验证失败');
+    }
+    return 'ok';
+  }
+
+  /**
+   * 验证token
+   */
+  verifyToken(token: string) {
+    return this.jwtService.verify(token);
   }
 }

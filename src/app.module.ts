@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
 import dsConfig from 'src/config/dbConfig';
 import emailConfig from './config/emailConfig';
+import config from './config';
 import { UserModule } from './api/user/user.module';
 import { UploadModule } from './api/upload/upload.module';
 import { AuthModule } from './api/auth/auth.module';
@@ -17,7 +18,7 @@ import { SystemModule } from './api/system/system.module';
     ConfigModule.forRoot({
       envFilePath: ['.env.local', `.env.${process.env.NODE_ENV}`],
       isGlobal: true,
-      load: [emailConfig, dsConfig],
+      load: [emailConfig, dsConfig, config],
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({

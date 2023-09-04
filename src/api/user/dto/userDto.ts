@@ -10,7 +10,7 @@ import {
   IsNumberString,
   IsPhoneNumber,
   Matches,
-  IsByteLength,
+  Length,
   IsString,
 } from 'class-validator';
 import { UserRole, Gender, Active } from 'src/types/user';
@@ -23,7 +23,7 @@ export class CreateUserDto {
     minLength: 2,
     description: '用户姓名在2-10之间',
   })
-  @IsByteLength(2, 20, {
+  @Length(2, 10, {
     message: (v) => `'${v.property}'长度必须是2-10个字符`,
   })
   @IsNotEmpty()

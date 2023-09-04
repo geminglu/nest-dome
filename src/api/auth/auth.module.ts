@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -14,12 +14,12 @@ import { LoginLogNetities } from 'src/entities/loginLog.netities';
 @Module({
   imports: [
     TypeOrmModule.forFeature([GraphicCodeNetities, LoginLogNetities]),
-    UserModule,
+    forwardRef(() => UserModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('SECRET'),
-        signOptions: { expiresIn: configService.get('ACCESS_TOKEN_EXPIRES') },
+        secret: configService.get('config.secret'),
+        signOptions: { expiresIn: configService.get('config.verifyCodeExpirationTime') },
       }),
       inject: [ConfigService],
     }),

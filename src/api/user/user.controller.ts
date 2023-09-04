@@ -1,16 +1,18 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UserInfo } from './dto/userDto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto, UpdateMyUserDto, UpdateMyEmailDto } from './dto/update-user.dto';
 import { QueryUserDto, LoginLogReqDto } from './dto/query-user-dto';
-import { ApiOperation, ApiParam, ApiTags, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags, ApiExtraModels } from '@nestjs/swagger';
 import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response';
 import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
 import { ResultData } from 'src/utils/result';
+import { ConfigService } from '@nestjs/config';
 import { ResCerated, ResSuccess } from 'src/utils/api.Response';
 import { QueryLogInLog } from 'src/dto';
-import { query } from 'express';
+import { AuthService } from '../auth/auth.service';
+import { verifyType } from '../auth/dto/auth.dto';
 
 @Controller({
   path: 'user',
@@ -24,6 +26,8 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private dataSource: DataSource,
+    private readonly config: ConfigService,
+    private authService: AuthService,
   ) {}
 
   @Post()
@@ -73,13 +77,24 @@ export class UserController {
     return this.userService.findOne(req.user.id);
   }
 
-  @Patch(':id')
+  @Patch('info:id')
   @ApiOperation({
-    summary: '修改用户列表',
-    description: '修改查询用户详情',
+    summary: '管理员修改用户列表详情',
+    description: '管理员修改查询用户详情',
   })
+  @Roles(Role.Admin)
   update(@Param('id') id: string, @Body() updateUser: UpdateUserDto) {
     return this.userService.update(id, updateUser);
+  }
+
+  @Patch()
+  @ApiOperation({
+    summary: '修改用户信息',
+    description: '修改用户信息',
+  })
+  @Roles(Role.Admin)
+  myUpdate(@Body() updateUser: UpdateMyUserDto, @Req() req) {
+    return this.userService.update(req.user.id, updateUser);
   }
 
   @Delete(':id')
@@ -118,5 +133,23 @@ export class UserController {
   @ResSuccess(LoginLogReqDto, true, true)
   logInLogs(@Query() query: QueryLogInLog) {
     return this.userService.getLogInLog(query);
+  }
+
+  @Patch('upEmial')
+  @ApiOperation({
+    summary: '修改邮箱',
+    description: '修改个人邮箱，在修改邮箱之前需要完成旧邮箱地址的验证并带上验证通过的token',
+  })
+  @ResSuccess()
+  async updateEmail(@Body() update: UpdateMyEmailDto, @Req() req) {
+    const payload = this.authService.verifyToken(update.token);
+    if (req.user.id !== payload.uid) {
+      return ResultData.fail('验证失败');
+    }
+    if (payload.type !== verifyType.UPEMAIL) {
+      return ResultData.fail('业务类型不支持');
+    }
+
+    return this.userService.update(req.user.id, { email: update.email });
   }
 }
