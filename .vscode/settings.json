@@ -13,5 +13,6 @@
       "database": "application",
       "username": "root"
     }
-  ]
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib"
 }

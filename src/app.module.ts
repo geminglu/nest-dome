@@ -11,6 +11,7 @@ import config from './config';
 import { UserModule } from './api/user/user.module';
 import { UploadModule } from './api/upload/upload.module';
 import { AuthModule } from './api/auth/auth.module';
+import { OpenaiModule } from './api/openai/openai.module';
 import { SystemModule } from './api/system/system.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { SystemModule } from './api/system/system.module';
     UploadModule,
     UserModule,
     AuthModule,
+    OpenaiModule,
     SystemModule,
   ],
   controllers: [AppController],
