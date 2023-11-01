@@ -38,7 +38,7 @@ export class CreateSystemDto {
   title: string;
 
   @IsOptional()
-  @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用' })
+  @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用', nullable: true })
   @IsNumberString()
   status?: SystemMenuHidden;
 
