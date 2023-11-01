@@ -32,8 +32,8 @@ export class SystemService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      // 创建菜单时路由名称不能为空
-      if (body.type === 'menu' && !body.name) return ResultData.fail('创建菜单时路由名称不能为空');
+      // 创建菜单时路由名地址不能为空
+      if (body.type === 'menu' && !body.path) return ResultData.fail('创建菜单时路由名称不能为空');
       // 创建目录时icon不能为空
       if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
       // 如果body中存在pid 需要验证pid是否在表中存在
@@ -45,7 +45,7 @@ export class SystemService {
       const systemMenun = new SystemMenunNetities();
       systemMenun.hidden = body.hidden || SystemMenuHidden.NO;
       systemMenun.icon = body.icon;
-      systemMenun.name = body.name || null;
+      systemMenun.path = body.path || null;
       systemMenun.pid = body.pid || null;
       systemMenun.title = body.title;
       systemMenun.type = body.type;
@@ -68,7 +68,7 @@ export class SystemService {
     await queryRunner.startTransaction();
     try {
       // 创建菜单时路由名称不能为空
-      if (body.type === 'menu' && !body.name) return ResultData.fail('创建菜单时路由名称不能为空');
+      if (body.type === 'menu' && !body.path) return ResultData.fail('创建菜单时路由名称不能为空');
       // 创建目录时icon不能为空
       if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
       const t = await this.SystemMenunRepository.findOne({
@@ -79,7 +79,7 @@ export class SystemService {
       const systemMenun = new SystemMenunNetities();
       body.hidden && (systemMenun.hidden = body.hidden);
       body.icon && (systemMenun.icon = body.icon);
-      body.name && (systemMenun.name = body.name);
+      body.path && (systemMenun.path = body.path);
       body.title && (systemMenun.title = body.title);
       body.status && (systemMenun.status = body.status);
       const menu = await queryRunner.manager.update<SystemMenunNetities>(
@@ -87,7 +87,6 @@ export class SystemService {
         id,
         systemMenun,
       );
-      console.log('menu', menu);
 
       await queryRunner.commitTransaction();
       if (!menu.affected) return ResultData.fail('数据不存在');

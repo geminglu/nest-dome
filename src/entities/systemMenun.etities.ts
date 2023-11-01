@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 import { SystemMenu, SystemMenuHidden } from 'src/types/user';
 
@@ -30,4 +30,7 @@ export class SystemMenunNetities {
 
   @Column('enum', { name: 'status', comment: '0:禁用；\n1:启用', enum: ['0', '1'] })
   status: '0' | '1';
+
+  @Column('varchar', { name: 'path', nullable: true, comment: '路由地址', length: 100 })
+  path: string | null;
 }

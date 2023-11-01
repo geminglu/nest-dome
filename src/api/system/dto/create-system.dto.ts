@@ -13,7 +13,11 @@ export class CreateSystemDto {
   @IsString()
   icon: string;
 
-  @ApiPropertyOptional({ title: '路由名称', description: '如果是是菜单路由名称就必须存在', maxLength: 10 })
+  @ApiPropertyOptional({
+    title: '路由名称',
+    description: '如果是是菜单路由名称就必须存在',
+    maxLength: 10,
+  })
   @MaxLength(10)
   @IsOptional()
   @IsString()
@@ -37,6 +41,12 @@ export class CreateSystemDto {
   @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用' })
   @IsNumberString()
   status?: SystemMenuHidden;
+
+  @MaxLength(10)
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ title: '路由地址', description: '如果是菜单必传', maxLength: 10 })
+  path?: string;
 }
 
 export class ResSystemMenuDto extends OmitType(CreateSystemDto, ['hidden']) {
