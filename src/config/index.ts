@@ -9,6 +9,14 @@ export interface configType {
    * JWT_secret
    */
   secret: string;
+  /**
+   * ACCESS_TOKEN过期时间
+   */
+  ACCESS_TOKEN_EXPIRES: string;
+  /**
+   * REFRESH_TOKEN过期时间
+   */
+  REFRESH_TOKEN_EXPIRES: string;
 }
 
 export default registerAs(
@@ -16,5 +24,7 @@ export default registerAs(
   (): configType => ({
     verifyCodeExpirationTime: process.env.GRAPHIC_EXPIRATION_TIME || '1500000',
     secret: process.env.SECRET || 'SECRET',
+    ACCESS_TOKEN_EXPIRES: process.env.ACCESS_TOKEN_EXPIRES || '36000000',
+    REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES || '72000000',
   }),
 );
