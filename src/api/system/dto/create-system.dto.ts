@@ -1,13 +1,8 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsOptional, MaxLength, IsNumberString } from 'class-validator';
-import { SystemMenu, SystemMenuHidden } from 'src/types/user';
+import { SystemMenuHidden } from 'src/types/user';
 
 export class CreateSystemDto {
-  @ApiProperty({ title: 'type', enum: SystemMenu })
-  @IsNotEmpty({ message: (v) => `'${v.property}'不能为空`, always: true })
-  @IsString()
-  type: SystemMenu;
-
   @ApiPropertyOptional({ title: 'icon', description: '如果创建目录icon必填' })
   @IsOptional()
   @IsString()
@@ -26,9 +21,9 @@ export class CreateSystemDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  pid?: string;
+  pid: string;
 
-  @ApiPropertyOptional({ title: '是否隐藏菜单', enum: SystemMenuHidden })
+  @ApiProperty({ title: '是否隐藏菜单', enum: SystemMenuHidden })
   hidden: SystemMenuHidden;
 
   @MaxLength(10)
@@ -38,39 +33,28 @@ export class CreateSystemDto {
   title: string;
 
   @IsOptional()
-  @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用', nullable: true })
+  @ApiProperty({ title: '状态', description: '0:禁用；1:启用' })
   @IsNumberString()
   status?: SystemMenuHidden;
 
-  @MaxLength(10)
-  @IsOptional()
+  @MaxLength(100)
+  @IsNotEmpty({
+    message: () => `path不能为空，如果是跟节点或叶子节点请讲 path 设置为子节点的 path`,
+    always: true,
+  })
   @IsString()
   @ApiPropertyOptional({ title: '路由地址', description: '如果是菜单必传', maxLength: 10 })
   path?: string;
 }
 
-export class ResSystemMenuDto extends OmitType(CreateSystemDto, ['hidden']) {
+export class ResSystemMenuDto extends CreateSystemDto {
   @ApiProperty({ title: 'id', required: true })
   @IsString()
   id: string;
-
-  @ApiProperty({ title: '是否隐藏菜单', enum: SystemMenuHidden })
-  hidden: SystemMenuHidden;
 
   @ApiProperty({ title: 'createAt', required: true })
   @IsString()
   createAt: string;
 }
 
-export class patchSystemDto extends OmitType(CreateSystemDto, ['pid']) {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  type: SystemMenu;
-
-  @ApiPropertyOptional()
-  @MaxLength(10)
-  @IsOptional()
-  @IsString()
-  title: string;
-}
+export class patchSystemDto extends PartialType(CreateSystemDto) {}

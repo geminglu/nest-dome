@@ -32,23 +32,17 @@ export class SystemService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      // 创建菜单时路由名地址不能为空
-      if (body.type === 'menu' && !body.path) return ResultData.fail('创建菜单时路由名称不能为空');
-      // 创建目录时icon不能为空
-      if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
-      // 如果body中存在pid 需要验证pid是否在表中存在
       const p = await this.SystemMenunRepository.findOne({ where: { id: body.pid } });
-      if (!p) return ResultData.fail('pid不存在');
+      if (!p) return ResultData.fail('所选pid不存在');
       const t = await this.SystemMenunRepository.findOne({ where: { title: body.title } });
       if (t) return ResultData.fail('菜单标题不能重复');
 
       const systemMenun = new SystemMenunNetities();
       systemMenun.hidden = body.hidden || SystemMenuHidden.NO;
       systemMenun.icon = body.icon;
-      systemMenun.path = body.path || null;
+      systemMenun.path = body.path;
       systemMenun.pid = body.pid || null;
       systemMenun.title = body.title;
-      systemMenun.type = body.type;
       systemMenun.status = body.status || '1';
       const systemMenunResult = await queryRunner.manager.save<SystemMenunNetities>(systemMenun);
       await queryRunner.commitTransaction();
@@ -67,10 +61,6 @@ export class SystemService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      // 创建菜单时路由名称不能为空
-      if (body.type === 'menu' && !body.path) return ResultData.fail('创建菜单时路由名称不能为空');
-      // 创建目录时icon不能为空
-      if (body.type === 'directory' && !body.icon) return ResultData.fail('创建目录时icon不能为空');
       const t = await this.SystemMenunRepository.findOne({
         where: { title: body.title, id: Not(id) },
       });
@@ -82,6 +72,7 @@ export class SystemService {
       body.path && (systemMenun.path = body.path);
       body.title && (systemMenun.title = body.title);
       body.status && (systemMenun.status = body.status);
+      body.pid && (systemMenun.pid = body.pid);
       const menu = await queryRunner.manager.update<SystemMenunNetities>(
         SystemMenunNetities,
         id,
@@ -109,7 +100,7 @@ export class SystemService {
     await queryRunner.startTransaction();
     try {
       const result = await this.SystemMenunRepository.findOne({ where: { pid: id } });
-      if (result) return ResultData.fail('目录下存在数据不能删除');
+      if (result) return ResultData.fail('菜单树下存在数据不能删除');
       const dele = await queryRunner.manager.delete(SystemMenunNetities, { id });
       await queryRunner.commitTransaction();
       if (!dele.affected) return ResultData.fail('数据不存在');

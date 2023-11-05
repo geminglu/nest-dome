@@ -65,7 +65,6 @@ export class SystemController {
   @Delete('menu/:id')
   @ResSuccess()
   delMenu(@Param('id') path: string) {
-    console.log(path);
     return this.systemService.deleMenu(path);
   }
 }

@@ -1,17 +1,11 @@
 import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
-import { SystemMenu, SystemMenuHidden } from 'src/types/user';
+import { SystemMenuHidden } from 'src/types/user';
 
 @Entity('system_menu', { schema: 'application' })
 export class SystemMenunNetities {
-  @Column('enum', { name: 'type', enum: SystemMenu, comment: '目录或菜单' })
-  type: SystemMenu;
-
-  @Column('varchar', { name: 'icon', comment: 'icon' })
+  @Column('varchar', { name: 'icon', comment: 'icon', nullable: true })
   icon: string;
-
-  @Column('varchar', { name: 'name', comment: 'name', nullable: true })
-  name: string | null;
 
   @Column('varchar', { name: 'title', comment: 'title' })
   title: string;
@@ -31,6 +25,6 @@ export class SystemMenunNetities {
   @Column('enum', { name: 'status', comment: '0:禁用；\n1:启用', enum: ['0', '1'] })
   status: '0' | '1';
 
-  @Column('varchar', { name: 'path', nullable: true, comment: '路由地址', length: 100 })
+  @Column('varchar', { name: 'path', comment: '路由地址', length: 100 })
   path: string | null;
 }
