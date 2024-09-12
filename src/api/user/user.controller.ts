@@ -94,6 +94,8 @@ export class UserController {
   })
   @Roles(Role.Admin)
   myUpdate(@Body() updateUser: UpdateMyUserDto, @Req() req) {
+    console.log(updateUser);
+
     return this.userService.update(req.user.id, updateUser);
   }
 

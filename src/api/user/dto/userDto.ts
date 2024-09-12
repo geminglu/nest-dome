@@ -55,7 +55,7 @@ export class CreateUserDto {
   avatars?: string;
 
   @IsOptional()
-  @IsPhoneNumber('CN')
+  @IsMobilePhone('zh-CN')
   @ApiPropertyOptional({ title: '手机号' })
   phone?: string;
 

@@ -17,11 +17,11 @@ import { UserRole, Gender, Active } from 'src/types/user';
 export class QueryUserDto {
   @IsOptional()
   @ApiProperty({ description: '分页大小', required: false, minimum: 1 })
-  pageSize: number;
+  pageSize?: number;
 
   @IsOptional()
   @ApiProperty({ description: '页码', required: false, minimum: 1 })
-  page: number;
+  page?: number;
 
   @IsOptional()
   @ApiProperty({
@@ -29,14 +29,14 @@ export class QueryUserDto {
     description: '角色;0：管理员;1：普通用户',
     required: false,
   })
-  role: UserRole;
+  role?: UserRole;
 
   @IsOptional()
   @ApiProperty({
     title: '姓名',
     required: false,
   })
-  name: string;
+  name?: string;
 
   @IsOptional()
   @ApiProperty({
@@ -46,31 +46,30 @@ export class QueryUserDto {
     description: '1：男；0：女',
     required: false,
   })
-  gender: Gender;
+  gender?: Gender;
 
   @IsOptional()
   @ApiProperty({
     description: '邮箱',
     required: false,
   })
-  @IsEmail()
-  email: string;
+  email?: string;
 
   @IsOptional()
   @ApiProperty({ description: '手机号', required: false })
-  phone: number;
+  phone?: number;
 
   @IsOptional()
   @ApiProperty({ description: '1：启用；0：禁用', enum: Active, required: false })
-  isActive: Active;
+  isActive?: Active;
 
   @IsOptional()
   @ApiProperty({ description: '创建时间开始', required: false })
-  createTimeStart: string;
+  createTimeStart?: string;
 
   @IsOptional()
   @ApiProperty({ description: '创建时间结束', required: false })
-  createTimeEnd: string;
+  createTimeEnd?: string;
 }
 
 export class LoginLogReqDto extends LoginLogNetities {

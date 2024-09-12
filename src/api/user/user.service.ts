@@ -56,12 +56,12 @@ export class UserService {
     try {
       const [timbers, timbersCount] = await this.usersRepository.findAndCount({
         where: {
-          phone: res.phone && Like(`%${res.phone}%`),
-          name: res.name && Like(`%${res.name}%`),
-          gender: res.gender,
-          email: res.email && Like(`%${res.email}%`),
-          role: res.role,
-          isActive: res.isActive,
+          phone: (res.phone && Like(`%${res.phone}%`)) || undefined,
+          name: (res.name && Like(`%${res.name}%`)) || undefined,
+          gender: res.gender || undefined,
+          email: (res.email && Like(`%${res.email}%`)) || undefined,
+          role: res.role || undefined,
+          isActive: res.isActive || undefined,
           createAt: Between<Date>(
             new Date(res.createTimeStart || 0),
             new Date(res.createTimeEnd || Date.now()),
