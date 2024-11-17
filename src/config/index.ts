@@ -22,7 +22,7 @@ export interface configType {
 export default registerAs(
   'config',
   (): configType => ({
-    verifyCodeExpirationTime: process.env.GRAPHIC_EXPIRATION_TIME || '1500000',
+    verifyCodeExpirationTime: process.env.GRAPHIC_EXPIRATION_TIME || '300000',
     secret: process.env.SECRET || 'SECRET',
     ACCESS_TOKEN_EXPIRES: process.env.ACCESS_TOKEN_EXPIRES || '36000000',
     REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES || '72000000',
