@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('login_log', { schema: 'application' })
@@ -33,10 +33,9 @@ export class LoginLogNetities {
   location: string;
 
   @ApiProperty({ description: '登陆时间' })
-  @Column('datetime', {
+  @CreateDateColumn({
     name: 'login_time',
     comment: '登陆时间',
-    default: () => "'CURRENT_TIMESTAMP(6)'",
   })
   loginTime: Date;
 }

@@ -14,7 +14,7 @@ export default registerAs(
     logger: 'file',
     logging: true,
     autoLoadEntities: true,
-    synchronize: false,
+    synchronize: true,
     timezone: 'UTC',
   }),
 );
