@@ -104,7 +104,7 @@ export class AuthService {
     await queryRunner.startTransaction();
     try {
       const { country, prov, city, district } =
-        (await axios.get(`https://qifu-api.baidubce.com/ip/geo/v1/district?ip=139.227.71.130`)).data
+        (await axios.get(`https://qifu-api.baidubce.com/ip/geo/v1/district?ip=${info.ip}`)).data
           ?.data || {};
       const LoginLog = new LoginLogNetities();
       LoginLog.uid = uid;

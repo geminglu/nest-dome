@@ -215,6 +215,8 @@ export class UserService {
       loginTime: i.login_time,
       userName: i.userName,
       location: i.location,
+      id: i.id,
+      loginIp: i.login_ip,
     }));
 
     return ResultData.ok({
