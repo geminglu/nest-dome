@@ -26,6 +26,7 @@ import {
 import { Active } from 'src/types/user';
 import { GraphicCodeNetities } from 'src/entities/graphicCode.netities';
 import NodeRSA = require('node-rsa');
+import { ipReg } from 'src/const/regexp';
 
 @Injectable()
 export class AuthService {
@@ -91,7 +92,7 @@ export class AuthService {
     }
 
     const result = await this.generateToken({ username: user.name, id: user.id });
-    this.addLoginLog(user.id, device);
+    await this.addLoginLog(user.id, device);
     return ResultData.ok(result, '登陆成功');
   }
 
@@ -104,11 +105,16 @@ export class AuthService {
     await queryRunner.startTransaction();
     try {
       const { country, prov, city, district } =
-        (await axios.get(`https://qifu-api.baidubce.com/ip/geo/v1/district?ip=${info.ip}`)).data
-          ?.data || {};
+        (
+          await axios.get(
+            `https://qifu-api.baidubce.com/ip/geo/v1/district?ip=${
+              ipReg.test(info.ip) ? info.ip : '0.0.0.0'
+            }`,
+          )
+        )?.data?.data || {};
       const LoginLog = new LoginLogNetities();
       LoginLog.uid = uid;
-      LoginLog.loginIp = info.ip;
+      LoginLog.loginIp = ipReg.test(info.ip) ? info.ip : '0.0.0.0';
       LoginLog.deviceInfo = info.deviceInfo;
       LoginLog.location = `${country}/${prov}/${city}/${district}`;
       await queryRunner.manager.save<LoginLogNetities>(LoginLog);
