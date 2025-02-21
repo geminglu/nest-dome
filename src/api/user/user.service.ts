@@ -8,7 +8,8 @@ import { UserEntities } from 'src/entities/user.entities';
 import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
-import { QueryLogInLog } from 'src/dto';
+import { QueryPaging } from 'src/dto';
+import { handelPaging } from 'src/utils';
 
 @Injectable()
 export class UserService {
@@ -49,11 +50,15 @@ export class UserService {
   }
 
   async findAll(query: QueryUserDto) {
-    const { page = 1, pageSize = 10, ...res } = query;
-    const skip = page <= 0 ? 1 : page;
-    const take = pageSize <= 0 ? 10 : pageSize;
+    const { page, pageSize, ...res } = query;
+    const { skip, take } = handelPaging(page, pageSize);
 
     try {
+      const order = {};
+      (res.sort || []).forEach((item) => {
+        order[item.prop] = item.order;
+      });
+
       const [timbers, timbersCount] = await this.usersRepository.findAndCount({
         where: {
           phone: (res.phone && Like(`%${res.phone}%`)) || undefined,
@@ -67,16 +72,17 @@ export class UserService {
             new Date(res.createTimeEnd || Date.now()),
           ),
         },
-        skip: (skip - 1) * skip,
+        order,
+        skip,
         take,
       });
       return {
         list: timbers,
         total: timbersCount,
-        page: page <= 0 ? 1 : page,
-        pageSize: pageSize <= 0 ? 10 : pageSize,
       };
-    } catch (error) {}
+    } finally {
+      //
+    }
   }
 
   /**
@@ -188,7 +194,7 @@ export class UserService {
    * 查询登陆日志
    * @param uid 用户ID
    */
-  async getLogInLog(query: QueryLogInLog, uid?: string) {
+  async getLogInLog(query: QueryPaging, uid?: string) {
     const { page, pageSize } = query;
     let take: number;
     let skip: number;

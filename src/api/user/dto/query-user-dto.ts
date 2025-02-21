@@ -1,28 +1,11 @@
-import { ApiProperty, ApiQuery, ApiSecurity } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsEmpty,
-  IsUUID,
-  IsMobilePhone,
-  IsOptional,
-  IsInt,
-  IsNumberString,
-} from 'class-validator';
-import { OmitType } from '@nestjs/mapped-types';
+import { ApiProperty, IntersectionType, PartialType } from '@nestjs/swagger';
+import { IsOptional, IsEnum } from 'class-validator';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
 
 import { UserRole, Gender, Active } from 'src/types/user';
+import { QueryPaging, QuerySortOrdersDto } from 'src/dto';
 
-export class QueryUserDto {
-  @IsOptional()
-  @ApiProperty({ description: '分页大小', required: false, minimum: 1 })
-  pageSize?: number;
-
-  @IsOptional()
-  @ApiProperty({ description: '页码', required: false, minimum: 1 })
-  page?: number;
-
+export class QueryUserDto extends IntersectionType(QueryPaging, PartialType(QuerySortOrdersDto)) {
   @IsOptional()
   @ApiProperty({
     enum: UserRole,
@@ -39,6 +22,7 @@ export class QueryUserDto {
   name?: string;
 
   @IsOptional()
+  @IsEnum(Gender)
   @ApiProperty({
     title: '性别',
     example: 1,
@@ -59,6 +43,7 @@ export class QueryUserDto {
   @ApiProperty({ description: '手机号', required: false })
   phone?: number;
 
+  @IsEnum(Active)
   @IsOptional()
   @ApiProperty({ description: '1：启用；0：禁用', enum: Active, required: false })
   isActive?: Active;

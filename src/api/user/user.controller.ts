@@ -9,8 +9,8 @@ import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
 import { ResultData } from 'src/utils/result';
 import { ConfigService } from '@nestjs/config';
-import { ResCerated, ResSuccess } from 'src/utils/api.Response';
-import { QueryLogInLog } from 'src/dto';
+import { ResSuccess } from 'src/utils/api.Response';
+import { QueryPaging } from 'src/dto';
 import { AuthService } from '../auth/auth.service';
 import { verifyType } from '../auth/dto/auth.dto';
 
@@ -60,8 +60,9 @@ export class UserController {
   @Get()
   @ApiOperation({
     summary: '查询用户列表',
-    description: '查询用户列表支持分页',
+    description: '查询用户列表',
   })
+  @ResSuccess(UserInfo, true, true)
   @Roles(Role.Admin)
   async findAll(@Query() query: QueryUserDto) {
     return ResultData.ok(await this.userService.findAll(query));
@@ -73,6 +74,7 @@ export class UserController {
     summary: '查询用户详情',
     description: '查询用户详情',
   })
+  @ResSuccess(UserInfo)
   findOne(@Req() req) {
     return this.userService.findOne(req.user.id);
   }
@@ -82,6 +84,7 @@ export class UserController {
     summary: '管理员修改用户列表详情',
     description: '管理员修改查询用户详情',
   })
+  @ResSuccess(UserInfo)
   @Roles(Role.Admin)
   update(@Param('id') id: string, @Body() updateUser: UpdateUserDto) {
     return this.userService.update(id, updateUser);
@@ -92,10 +95,9 @@ export class UserController {
     summary: '修改用户信息',
     description: '修改用户信息',
   })
+  @ResSuccess(UserInfo)
   @Roles(Role.Admin)
   myUpdate(@Body() updateUser: UpdateMyUserDto, @Req() req) {
-    console.log(updateUser);
-
     return this.userService.update(req.user.id, updateUser);
   }
 
@@ -104,6 +106,7 @@ export class UserController {
     summary: '删除用户',
     description: '删除用户',
   })
+  @ResSuccess()
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
@@ -113,7 +116,7 @@ export class UserController {
     summary: '查询登陆用户详情',
     description: '查询登陆用户详情',
   })
-  @ResCerated(UserInfo)
+  @ResSuccess(UserInfo)
   userInfo(@Req() req) {
     return this.userService.getUserInfo(req.user.id);
   }
@@ -123,7 +126,7 @@ export class UserController {
     summary: '查询当前登陆用户的登陆日志',
   })
   @ResSuccess(LoginLogReqDto, true, true)
-  logInLog(@Query() query: QueryLogInLog, @Req() req) {
+  logInLog(@Query() query: QueryPaging, @Req() req) {
     return this.userService.getLogInLog(query, req.user.id);
   }
 
@@ -133,7 +136,7 @@ export class UserController {
   })
   @Roles(Role.Admin)
   @ResSuccess(LoginLogReqDto, true, true)
-  logInLogs(@Query() query: QueryLogInLog) {
+  logInLogs(@Query() query: QueryPaging) {
     return this.userService.getLogInLog(query);
   }
 

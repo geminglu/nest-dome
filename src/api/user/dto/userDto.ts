@@ -1,29 +1,14 @@
-import { ApiProperty, ApiPropertyOptional, PartialType, OmitType } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsEmpty,
-  IsUUID,
-  IsMobilePhone,
-  IsOptional,
-  IsInt,
-  IsNumberString,
-  IsPhoneNumber,
-  Matches,
-  Length,
-  IsString,
-} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsMobilePhone, IsOptional, Length, IsString } from 'class-validator';
 import { UserRole, Gender, Active } from 'src/types/user';
 
 export class CreateUserDto {
   @ApiProperty({
     example: '张三',
     title: '用户名',
-    maxLength: 10,
     minLength: 2,
-    description: '用户姓名在2-10之间',
   })
-  @Length(2, 10, {
+  @Length(2, 25, {
     message: (v) => `'${v.property}'长度必须是2-10个字符`,
   })
   @IsNotEmpty()
@@ -77,9 +62,12 @@ export class CreateUserDto {
   password: string;
 }
 
-export class UserInfo extends PartialType(OmitType(CreateUserDto, ['password'])) {
-  @ApiPropertyOptional({ title: '创建时间' })
+export class UserInfo extends OmitType(CreateUserDto, ['password']) {
+  @ApiProperty({ title: '创建时间' })
   createAt: Date;
+
+  @ApiProperty({ title: '1：启用；0：禁用', enum: Active })
+  isActive?: Active;
 
   @ApiProperty()
   id: string;

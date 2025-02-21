@@ -19,7 +19,7 @@ const baseTypeNames = ['String', 'Number', 'Boolean'];
  * @param status 自定义状态码
  * @param model 返回的 data 的数据类型
  * @param isArray data 是否是数组
- * @param isPager 设置为 true, 则 data 类型为 { list, total, page, pageSize } , false data 类型是纯数组
+ * @param isPager 设置为 true, 则 data 类型为 { list, total } , false data 类型是纯数组
  */
 export const SuccessResponse = <TModel extends Type<any>>(
   status: any,
@@ -90,7 +90,7 @@ export const SuccessResponse = <TModel extends Type<any>>(
  * 成功状态的返回结构
  * @param model 返回的 data 的数据类型
  * @param isArray data 是否是数组
- * @param isPager 设置为 true, 则 data 类型为 { list, total, page, pageSize } , false data 类型是纯数组
+ * @param isPager 设置为 true, 则 data 类型为 { list, total } , false data 类型是纯数组
  */
 export const ResSuccess = <TModel extends Type<any>>(
   model?: TModel,
@@ -104,7 +104,7 @@ export const ResSuccess = <TModel extends Type<any>>(
  * 创建成功的返回结构
  * @param model 返回的 data 的数据类型
  * @param isArray data 是否是数组
- * @param isPager 设置为 true, 则 data 类型为 { list, total, page, pageSize } , false data 类型是纯数组
+ * @param isPager 设置为 true, 则 data 类型为 { list, total } , false data 类型是纯数组
  */
 export const ResCerated = <TModel extends Type<any>>(
   model?: TModel,

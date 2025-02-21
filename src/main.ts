@@ -43,6 +43,7 @@ async function bootstrap() {
     new ValidationPipe({
       enableDebugMessages: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
       stopAtFirstError: true,
     }),
   );
