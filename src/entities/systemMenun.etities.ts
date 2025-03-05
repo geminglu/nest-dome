@@ -11,7 +11,7 @@ export class SystemMenunNetities {
   title: string;
 
   @Column('varchar', { name: 'pid', nullable: true, comment: 'pid' })
-  pid: string;
+  pid: string | null;
 
   @Column('enum', { name: 'hidden', enum: SystemMenuHidden, comment: '在系统菜单中隐藏' })
   hidden: SystemMenuHidden;
@@ -27,4 +27,15 @@ export class SystemMenunNetities {
 
   @Column('varchar', { name: 'path', comment: '路由地址', length: 100 })
   path: string | null;
+
+  @Column('varchar', {
+    name: 'remark',
+    nullable: true,
+    comment: '备注',
+    length: 255,
+  })
+  remark: string | null;
+
+  @Column('varchar', { name: 'type', nullable: false, length: 10 })
+  type: string;
 }

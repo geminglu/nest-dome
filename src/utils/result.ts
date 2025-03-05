@@ -9,7 +9,7 @@ export class ResultData {
   @ApiProperty({ type: 'string', default: '' })
   message?: string;
 
-  @ApiProperty({ type: 'any' })
+  @ApiProperty()
   data?: any;
 
   @ApiProperty({ type: 'boolean' })

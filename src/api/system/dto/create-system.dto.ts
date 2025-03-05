@@ -14,6 +14,7 @@ import {
   IsNumberString,
   IsNumber,
   Matches,
+  IsEnum,
 } from 'class-validator';
 import { SystemMenuHidden } from 'src/types/user';
 import { QueryPaging, SortOrder } from 'src/dto';
@@ -26,22 +27,22 @@ export class CreateSystemDto {
   @IsString()
   icon: string;
 
-  @ApiPropertyOptional({
-    title: '路由名称',
-    description: '如果是是菜单路由名称就必须存在',
-    maxLength: 10,
-  })
-  @MaxLength(10)
-  @IsOptional()
-  @IsString()
-  name: string;
+  // @ApiPropertyOptional({
+  //   title: '路由名称',
+  //   description: '如果是是菜单路由名称就必须存在',
+  //   maxLength: 10,
+  // })
+  // @MaxLength(10)
+  // @IsOptional()
+  // @IsString()
+  // name: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   pid: string;
 
-  @ApiProperty({ title: '是否隐藏菜单', enum: SystemMenuHidden })
+  @ApiProperty({ title: '是否隐藏菜单', enum: SystemMenuHidden, description: '1:显示；0:隐藏' })
   hidden: SystemMenuHidden;
 
   @MaxLength(10)
@@ -51,18 +52,26 @@ export class CreateSystemDto {
   title: string;
 
   @IsOptional()
-  @ApiProperty({ title: '状态', description: '0:禁用；1:启用' })
+  @ApiPropertyOptional({ title: '状态', description: '0:禁用；1:启用', default: '1' })
   @IsNumberString()
   status?: SystemMenuHidden;
 
   @MaxLength(100)
-  @IsNotEmpty({
-    message: () => `path不能为空，如果是跟节点或叶子节点请讲 path 设置为子节点的 path`,
-    always: true,
-  })
+  @IsOptional()
   @IsString()
-  @ApiPropertyOptional({ title: '路由地址', description: '如果是菜单必传', maxLength: 10 })
-  path?: string;
+  @ApiPropertyOptional({ title: '路由地址', description: '如果是菜单必传' })
+  path?: string | null;
+
+  @MaxLength(255)
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ title: '备注' })
+  remark?: string;
+
+  @ApiProperty({ title: 'type', description: 'menu:菜单；dir:目录' })
+  @IsString()
+  @IsEnum(['menu', 'dir'])
+  type: 'menu' | 'dir';
 }
 
 export class ResSystemMenuDto extends CreateSystemDto {

@@ -47,18 +47,23 @@ export class SystemService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const p = await this.SystemMenunRepository.findOne({ where: { id: body.pid } });
-      if (!p) return ResultData.fail('所选pid不存在');
+      if (body.pid) {
+        const p = await this.SystemMenunRepository.findOne({ where: { id: body.pid } });
+        if (!p) return ResultData.fail('所选pid不存在');
+      }
       const t = await this.SystemMenunRepository.findOne({ where: { title: body.title } });
       if (t) return ResultData.fail('菜单标题不能重复');
 
       const systemMenun = new SystemMenunNetities();
       systemMenun.hidden = body.hidden || SystemMenuHidden.NO;
       systemMenun.icon = body.icon;
-      systemMenun.path = body.path;
+      systemMenun.path = body.type === 'menu' ? body.path : null;
       systemMenun.pid = body.pid || null;
       systemMenun.title = body.title;
       systemMenun.status = body.status || '1';
+      systemMenun.remark = body.remark || '';
+      systemMenun.type = body.type;
+
       const systemMenunResult = await queryRunner.manager.save<SystemMenunNetities>(systemMenun);
       await queryRunner.commitTransaction();
       return ResultData.ok(systemMenunResult);
@@ -82,12 +87,14 @@ export class SystemService {
       if (t) return ResultData.fail('菜单标题不能重复');
 
       const systemMenun = new SystemMenunNetities();
-      body.hidden && (systemMenun.hidden = body.hidden);
-      body.icon && (systemMenun.icon = body.icon);
-      body.path && (systemMenun.path = body.path);
-      body.title && (systemMenun.title = body.title);
+      body.hidden !== undefined && (systemMenun.hidden = body.hidden);
+      body.icon !== undefined && (systemMenun.icon = body.icon);
+      body.path !== undefined && body.type === 'menu' && (systemMenun.path = body.path);
+      body.title !== undefined && (systemMenun.title = body.title);
       body.status && (systemMenun.status = body.status);
-      body.pid && (systemMenun.pid = body.pid);
+      body.pid !== undefined && (systemMenun.pid = body.pid);
+      systemMenun.remark = body.remark || '';
+      body.type && (systemMenun.type = body.type);
       const menu = await queryRunner.manager.update<SystemMenunNetities>(
         SystemMenunNetities,
         id,
