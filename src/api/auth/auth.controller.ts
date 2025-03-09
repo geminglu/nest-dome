@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, Req, HttpCode } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiOperation, ApiExtraModels } from '@nestjs/swagger';
-import * as UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 import { Repository, DataSource } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
