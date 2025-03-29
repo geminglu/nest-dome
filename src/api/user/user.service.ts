@@ -1,15 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { QueryUserDto } from './dto/query-user-dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, DataSource, QueryRunner, Between, Not } from 'typeorm';
+import {
+  Repository,
+  Like,
+  DataSource,
+  QueryRunner,
+  Between,
+  Not,
+  In,
+  FindOptionsWhere,
+} from 'typeorm';
 import { UserEntities } from 'src/entities/user.entities';
 import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import { QueryPaging } from 'src/dto';
 import { handelPaging } from 'src/utils';
+import { SysDept } from 'src/entities/SysDept';
+import { DeptService } from '../system/dept/dept.service';
+import { CreateUserDto, UserInfo } from './dto/userDto';
 
 @Injectable()
 export class UserService {
@@ -18,7 +30,10 @@ export class UserService {
     private usersRepository: Repository<UserEntities>,
     @InjectRepository(LoginLogNetities)
     private LoginLogRepository: Repository<LoginLogNetities>,
+    @InjectRepository(SysDept)
+    private SysDeptRepository: Repository<SysDept>,
     private dataSource: DataSource,
+    private deptService: DeptService,
   ) {}
 
   /**
@@ -27,11 +42,17 @@ export class UserService {
    * @param transaction 事务
    * @returns
    */
-  async create(createUser: Omit<UserEntities, 'id' | 'createAt'>, queryRunner: QueryRunner) {
+  async create(createUser: CreateUserDto & { password: string }, queryRunner: QueryRunner) {
     // 创建之前先判断用户名，邮箱和手机号是否存在
     const verify = await this.verifyIsCreateUser(createUser);
     if (verify) {
       throw new Error(verify);
+    }
+    if (createUser.deptId) {
+      const dept = await this.SysDeptRepository.findOne({ where: { id: createUser.deptId } });
+      if (!dept) {
+        throw new BadRequestException('deptId不存在');
+      }
     }
     const salt = await bcrypt.genSalt();
     const hash = await bcrypt.hash(createUser.password, salt);
@@ -45,13 +66,23 @@ export class UserService {
     user.role = createUser.role || UserRole.USER;
     user.isActive = createUser.isActive || Active.ENABLE;
     user.password = hash;
+    createUser.deptId && (user.deptId = createUser.deptId);
     const postRepository = await queryRunner.manager.save<UserEntities>(user);
-    return postRepository;
+    return {
+      ...postRepository,
+      password: createUser.password,
+      deptName: (await this.deptService.findOne(createUser.deptId)).deptName,
+    };
   }
 
   async findAll(query: QueryUserDto) {
     const { page, pageSize, ...res } = query;
     const { skip, take } = handelPaging(page, pageSize);
+
+    const depts: number[] = [];
+    if (query.deptId) {
+      depts.push(...(await this.deptService.findSubDepts(query.deptId)).map((item) => item.id));
+    }
 
     try {
       const order = {};
@@ -59,27 +90,46 @@ export class UserService {
         order[item.prop] = item.order;
       });
 
-      const [timbers, timbersCount] = await this.usersRepository.findAndCount({
-        where: {
-          phone: (res.phone && Like(`%${res.phone}%`)) || undefined,
-          name: (res.name && Like(`%${res.name}%`)) || undefined,
-          gender: res.gender || undefined,
-          email: (res.email && Like(`%${res.email}%`)) || undefined,
-          role: res.role || undefined,
-          isActive: res.isActive || undefined,
-          createAt: Between<Date>(
-            new Date(res.createTimeStart || 0),
-            new Date(res.createTimeEnd || Date.now()),
-          ),
-        },
-        order,
-        skip,
-        take,
-      });
-      return {
-        list: timbers,
-        total: timbersCount,
+      const where: FindOptionsWhere<UserEntities> = {
+        phone: (res.phone && Like(`%${res.phone}%`)) || undefined,
+        name: (res.name && Like(`%${res.name}%`)) || undefined,
+        gender: res.gender || undefined,
+        email: (res.email && Like(`%${res.email}%`)) || undefined,
+        role: res.role || undefined,
+        isActive: res.isActive || undefined,
+        createAt: Between<Date>(
+          new Date(res.createTimeStart || 0),
+          new Date(res.createTimeEnd || Date.now()),
+        ),
+        deptId: depts.length ? In(depts) : undefined,
       };
+
+      Object.keys(where).forEach((key) => where[key] === undefined && delete where[key]);
+
+      const builder = this.usersRepository
+        .createQueryBuilder('u')
+        .leftJoin(SysDept, 'b', 'b.id = u.deptId')
+        .where(where)
+        .limit(take)
+        .offset(skip)
+        .orderBy(order)
+        .select([
+          'u.role as role',
+          'u.name as name',
+          'u.phone as phone',
+          'u.isActive as isActive',
+          'u.id as id',
+          'u.gender as gender',
+          'u.email as email',
+          'u.deptId as deptId',
+          'u.createAt as createAt',
+          'u.avatars as avatars',
+          'b.dept_name as deptName',
+        ]);
+
+      const [list, total] = await Promise.all([builder.getRawMany<UserInfo>(), builder.getCount()]);
+
+      return { list, total };
     } finally {
       //
     }
@@ -109,6 +159,13 @@ export class UserService {
         const u = await this.usersRepository.findOne({ where: { email: user.email, id: Not(id) } });
         if (u) return ResultData.fail('邮箱不能重复');
       }
+      if (user.deptId) {
+        const dept = await this.SysDeptRepository.findOne({ where: { id: user.deptId } });
+        if (!dept) {
+          throw new BadRequestException('deptId不存在');
+        }
+      }
+
       const updateUser = new UserEntities();
       user.avatars && (updateUser.avatars = user.avatars);
       user.email && (updateUser.email = user.email);
@@ -117,6 +174,7 @@ export class UserService {
       user.name && (updateUser.name = user.name);
       user.phone && (updateUser.phone = user.phone);
       user.role && (updateUser.role = user.role);
+      user.deptId && (updateUser.deptId = user.deptId);
       const up = await queryRunner.manager.update<UserEntities>(UserEntities, id, updateUser);
       await queryRunner.commitTransaction();
       if (!up.affected) return ResultData.fail('数据不存在');
@@ -225,9 +283,6 @@ export class UserService {
       loginIp: i.login_ip,
     }));
 
-    return ResultData.ok({
-      list,
-      total: timbersCount,
-    });
+    return ResultData.ok({ list, total: timbersCount });
   }
 }

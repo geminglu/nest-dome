@@ -1,10 +1,20 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateDeptDto, QueryDeptDto, UpdateDeptDto } from '../dto/dept.dto';
-import { Between, DataSource, FindOptionsWhere, Like, QueryRunner, Repository } from 'typeorm';
+import { CreateDeptDto, DeptDtoInfo, QueryDeptDto, UpdateDeptDto } from '../dto/dept.dto';
+import {
+  Between,
+  DataSource,
+  FindOptionsWhere,
+  Like,
+  QueryRunner,
+  Repository,
+  In,
+  IsNull,
+} from 'typeorm';
 import { SysDept } from 'src/entities/SysDept';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntities } from 'src/entities/user.entities';
 import { isNotEmpty } from 'src/utils/is';
+import { StatusEnum } from 'src/dto';
 
 @Injectable()
 export class DeptService {
@@ -17,8 +27,6 @@ export class DeptService {
    * 创建部门
    */
   async create(deptDto: CreateDeptDto, userId: string) {
-    console.log(333, userId);
-
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -63,7 +71,12 @@ export class DeptService {
       remark: isNotEmpty(query.remark) ? Like(`%${query.remark}%`) : undefined,
       leader: query.leader,
       status: query.status,
-      parentId: query.parentId ? query.parentId : undefined,
+      parentId:
+        query.lazy === StatusEnum.ENABLE
+          ? query.parentId || IsNull()
+          : query.parentId
+            ? In((await this.findSubDepts(query.parentId)).map((item) => item.id))
+            : undefined,
       createAt: Between(
         new Date(query.createTimeStart || 0),
         new Date(query.createTimeEnd || Date.now()),
@@ -110,7 +123,10 @@ export class DeptService {
       .orderBy(order)
       .addOrderBy('createBy', 'DESC');
 
-    const [list, total] = await Promise.all([builder.getRawMany(), builder.getCount()]);
+    const [list, total] = await Promise.all([
+      builder.getRawMany<DeptDtoInfo>(),
+      builder.getCount(),
+    ]);
     return { list, total };
   }
 
@@ -182,5 +198,36 @@ export class DeptService {
     } finally {
       !tx && (await queryRunner.release());
     }
+  }
+
+  async findSubDepts(deptId: number) {
+    const query = `WITH RECURSIVE sub_depts AS (
+        SELECT id, parent_id, dept_name, CAST(dept_name AS CHAR(1000)) AS path_name, CAST(id AS CHAR(1000)) AS path_id
+        FROM sys_dept
+        WHERE id = ?
+        UNION ALL
+        SELECT d.id, d.parent_id, d.dept_name, CONCAT(sd.path_name, '/', d.dept_name), CONCAT(sd.path_id, '/', d.id)
+        FROM sys_dept d
+        INNER JOIN sub_depts sd ON d.parent_id = sd.id
+    )
+    SELECT * FROM sub_depts;`;
+
+    return (
+      await this.dataSource.query<
+        {
+          id: number;
+          parent_id: number;
+          dept_name: string;
+          path_name: string;
+          path_id: string;
+        }[]
+      >(query, [deptId])
+    ).map((item) => ({
+      id: item.id,
+      parentId: item.parent_id,
+      deptName: item.dept_name,
+      pathName: item.path_name,
+      pathId: item.path_id,
+    }));
   }
 }

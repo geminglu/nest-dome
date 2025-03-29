@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Req } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto, UserInfo } from './dto/userDto';
+import { CreateUserDto, CreateUserResponse, UserInfo } from './dto/userDto';
 import { UpdateUserDto, UpdateMyUserDto, UpdateMyEmailDto } from './dto/update-user.dto';
 import { QueryUserDto, LoginLogReqDto } from './dto/query-user-dto';
-import { ApiOperation, ApiParam, ApiTags, ApiExtraModels } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags, ApiExtraModels, ApiBearerAuth } from '@nestjs/swagger';
 import { ResUnauthorized, ResServerErrorResponse } from 'src/utils/api.Response';
 import { DataSource } from 'typeorm';
 import { Roles, Role } from 'src/decorators/roles.decorator';
@@ -13,15 +13,17 @@ import { ResSuccess } from 'src/utils/api.Response';
 import { QueryPaging } from 'src/dto';
 import { AuthService } from '../auth/auth.service';
 import { verifyType } from '../auth/dto/auth.dto';
+import { generateRandomString } from 'src/utils';
 
 @Controller({
   path: 'user',
   version: '1',
 })
 @ApiTags('用户')
+@ApiBearerAuth()
 @ResUnauthorized()
 @ResServerErrorResponse()
-@ApiExtraModels(UserInfo, LoginLogReqDto)
+@ApiExtraModels(UserInfo, LoginLogReqDto, CreateUserResponse)
 export class UserController {
   constructor(
     private readonly userService: UserService,
@@ -35,16 +37,15 @@ export class UserController {
     summary: '创建用户',
     description: '创建一个新用户仅管理员权限',
   })
-  @ResSuccess(UserInfo)
+  @ResSuccess(CreateUserResponse)
   @Roles(Role.Admin)
   async create(@Body() createUser: CreateUserDto) {
     const queryRunner = this.dataSource.createQueryRunner();
-
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction();
       const user = await this.userService.create(
-        { ...createUser, password: '123456' },
+        { ...createUser, password: generateRandomString() },
         queryRunner,
       );
       await queryRunner.commitTransaction();
@@ -79,7 +80,7 @@ export class UserController {
     return this.userService.findOne(req.user.id);
   }
 
-  @Patch('info:id')
+  @Patch('info/:id')
   @ApiOperation({
     summary: '管理员修改用户列表详情',
     description: '管理员修改查询用户详情',

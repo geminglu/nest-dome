@@ -10,25 +10,14 @@ import {
   IsNotEmpty,
   IsString,
   IsOptional,
-  MaxLength,
-  IsNumberString,
-  IsNumber,
-  Matches,
   IsEnum,
   IsInt,
-  isString,
   IsEmail,
   IsMobilePhone,
   Min,
   IsDateString,
-  isInt,
 } from 'class-validator';
-import { QueryPaging, QuerySortOrdersDto } from 'src/dto';
-
-export enum StatusEnum {
-  ENABLE = '0',
-  DISABLE = '1',
-}
+import { QuerySortOrdersDto, StatusEnum } from 'src/dto';
 
 export class DeptDtoInfo {
   @IsInt()
@@ -37,7 +26,6 @@ export class DeptDtoInfo {
   id: number;
 
   @ApiPropertyOptional({ title: '父部门id' })
-  @IsInt()
   @IsOptional()
   parentId?: number | null;
 
@@ -48,7 +36,7 @@ export class DeptDtoInfo {
 
   @ApiProperty({ title: '部门名称' })
   @IsString()
-  @IsNotEmpty()
+  // @IsNotEmpty()
   deptName: string;
 
   @ApiPropertyOptional({ title: '显示顺序', minimum: 0, type: 'integer' })
@@ -141,6 +129,15 @@ export class QueryDeptDto extends IntersectionType(
   PartialType(QuerySortOrdersDto),
   OmitType(UpdateDeptDto, ['orderNum', 'phone', 'email']),
 ) {
+  @ApiPropertyOptional({
+    title: '懒加载',
+    description: '开启后子部门将不在递归查询,0:开启；1:不开启',
+    enum: ['0', '1'],
+  })
+  @IsEnum(StatusEnum)
+  @IsOptional()
+  lazy?: StatusEnum;
+
   @ApiPropertyOptional({ title: '联系电话' })
   @IsString()
   @IsOptional()

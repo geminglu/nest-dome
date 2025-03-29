@@ -2,6 +2,11 @@ import { IsArray, IsIn, IsInt, IsNotEmpty, IsString, Min, ValidateNested } from 
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, TransformFnParams, Type, plainToInstance } from 'class-transformer';
 
+export enum StatusEnum {
+  ENABLE = '0',
+  DISABLE = '1',
+}
+
 export class QueryPaging {
   @Min(1)
   @IsInt()

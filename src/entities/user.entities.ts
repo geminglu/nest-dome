@@ -21,12 +21,7 @@ export class UserEntities {
   })
   role?: UserRole;
 
-  @Column('enum', {
-    name: 'gender',
-    nullable: true,
-    comment: '1：男；0：女',
-    enum: Gender,
-  })
+  @Column('enum', { name: 'gender', nullable: true, comment: '1：男；0：女', enum: Gender })
   gender?: Gender;
 
   @Column('enum', {
@@ -44,14 +39,12 @@ export class UserEntities {
   @Column('bigint', { name: 'phone', nullable: true, comment: '手机号' })
   phone?: number | string;
 
-  @Column('varchar', {
-    name: 'avatars',
-    nullable: true,
-    comment: '用户头像',
-    length: 255,
-  })
+  @Column('varchar', { name: 'avatars', nullable: true, comment: '用户头像', length: 255 })
   avatars?: string | null;
 
   @Column('varchar', { name: 'password', comment: '密码', length: 255 })
   password: string;
+
+  @Column('int', { name: 'deptId', nullable: true, comment: '所在部门' })
+  deptId?: number | null;
 }
