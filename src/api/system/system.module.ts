@@ -8,6 +8,11 @@ import { DictionaryNetities } from 'src/entities/dictionary.netities';
 import { DeptService } from './dept/dept.service';
 import { DeptController } from './dept/dept.controller';
 import { SysDept } from 'src/entities/SysDept';
+import { SysRoleNetities } from 'src/entities/sysRole.etities';
+import { SysRoleMenuNetities } from 'src/entities/sysRoleMenu.etities';
+import { SysUserRoleNetities } from 'src/entities/sysUserRole.etities';
+import { RoleController } from 'src/api/system/role/role.controller';
+import { RoleService } from 'src/api/system/role/role.service';
 
 @Module({
   imports: [
@@ -15,10 +20,13 @@ import { SysDept } from 'src/entities/SysDept';
       SystemMenunNetities,
       DictionaryInfoNetities,
       DictionaryNetities,
+      SysRoleNetities,
+      SysRoleMenuNetities,
+      SysUserRoleNetities,
       SysDept,
     ]),
   ],
-  controllers: [SystemController, DeptController],
-  providers: [SystemService, DeptService],
+  controllers: [SystemController, DeptController, RoleController],
+  providers: [SystemService, DeptService, RoleService],
 })
 export class SystemModule {}

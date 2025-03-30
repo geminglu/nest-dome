@@ -79,6 +79,7 @@ export class DeptController {
     name: 'id',
     description: '部门ID',
   })
+  @ResSuccess()
   async remove(@Param('id') id: string) {
     await this.deptService.remove(+id);
     return ResultData.ok();

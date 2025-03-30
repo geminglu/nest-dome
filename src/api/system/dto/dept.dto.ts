@@ -76,12 +76,12 @@ export class DeptDtoInfo {
   @IsOptional()
   createByName?: string | null;
 
-  @ApiProperty({ title: '创建时间' })
+  @ApiProperty({ title: '创建时间', type: Date })
   @IsString()
   @IsOptional()
   createAt: string;
 
-  @ApiPropertyOptional({ title: '更新者', type: Date })
+  @ApiPropertyOptional({ title: '更新者' })
   @IsString()
   @IsOptional()
   updateBy?: string | null;
