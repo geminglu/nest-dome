@@ -10,6 +10,7 @@ import {
   IsInt,
   isNumber,
   IsNumber,
+  IsArray,
 } from 'class-validator';
 import { UserRole, Gender, Active } from 'src/types/user';
 
@@ -54,6 +55,12 @@ export class CreateUserDto {
   @IsInt()
   @ApiPropertyOptional({ title: '部门Id', required: false })
   deptId?: number;
+
+  @ApiPropertyOptional({ title: '角色', type: 'string', isArray: true })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  roles?: number[];
 }
 
 export class UserInfo extends OmitType(CreateUserDto, ['isActive']) {

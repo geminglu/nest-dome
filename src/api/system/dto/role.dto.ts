@@ -5,7 +5,7 @@ import {
   PartialType,
   PickType,
 } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength, IsInt, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength, IsInt, IsOptional, IsArray } from 'class-validator';
 import { QueryPaging, QuerySortOrdersDto } from 'src/dto';
 
 export class CreateRoleDto {
@@ -20,6 +20,12 @@ export class CreateRoleDto {
   @IsOptional()
   @MaxLength(255)
   remark?: string;
+
+  @ApiPropertyOptional({ title: '备注', type: 'string', isArray: true })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  menuPermissions?: string[];
 }
 
 export class RoleInfoDto extends CreateRoleDto {
@@ -38,7 +44,7 @@ export class RoleInfoDto extends CreateRoleDto {
   updateTime: string;
 }
 
-export class UpdateRoleDto extends CreateRoleDto {}
+export class UpdateRoleDto extends PartialType(CreateRoleDto) {}
 
 export class QueryDeptDto extends IntersectionType(
   PartialType(QuerySortOrdersDto),

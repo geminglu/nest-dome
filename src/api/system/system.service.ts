@@ -10,12 +10,14 @@ import {
   patchSystemDto,
 } from './dto/create-system.dto';
 import { ResultData } from 'src/utils/result';
-import { DataSource, Repository, Not, Like, QueryRunner } from 'typeorm';
+import { DataSource, Repository, Not, Like, QueryRunner, Equal, In } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SystemMenunNetities } from 'src/entities/systemMenun.etities';
 import { SystemMenuHidden } from 'src/types/user';
 import { DictionaryNetities } from 'src/entities/dictionary.netities';
 import { DictionaryInfoNetities } from 'src/entities/dictionaryInfo.netities';
+import { SysUserRoleNetities } from 'src/entities/sysUserRole.etities';
+import { SysRoleMenuNetities } from 'src/entities/sysRoleMenu.etities';
 
 @Injectable()
 export class SystemService {
@@ -27,6 +29,10 @@ export class SystemService {
     private readonly DictionaryNetities: Repository<DictionaryNetities>,
     @InjectRepository(DictionaryInfoNetities)
     private readonly DictionaryInfoNetities: Repository<DictionaryInfoNetities>,
+    @InjectRepository(SysUserRoleNetities)
+    private sysUserRoleRepository: Repository<SysUserRoleNetities>,
+    @InjectRepository(SysRoleMenuNetities)
+    private readonly sysRoleMenuRepository: Repository<SysRoleMenuNetities>,
   ) {}
 
   async findMenu(id?: string) {
@@ -38,8 +44,24 @@ export class SystemService {
    * @param id 用户ID
    */
   async getPermissionMenu(id: string) {
-    // TODO 后期会根据用角色做过滤
-    return ResultData.ok(await this.SystemMenunRepository.find({ where: { status: '1' } }));
+    const builder = this.sysUserRoleRepository
+      .createQueryBuilder('r')
+      .leftJoin(SysRoleMenuNetities, 'm', 'r.roleId = m.roleId')
+      .where({ userId: Equal(id) })
+      .select([
+        'COALESCE(NULLIF(JSON_ARRAYAGG(m.menuId), JSON_ARRAYAGG(NULL)), JSON_ARRAY()) as menu',
+      ])
+      .groupBy('r.id');
+
+    let menus: string[] = [];
+    (await builder.getRawMany<{ menu: string[] }>()).forEach((item) => {
+      menus.push(...item.menu);
+    });
+
+    menus = Array.from(new Set(menus));
+    return ResultData.ok(
+      await this.SystemMenunRepository.find({ where: { status: '1', id: In(menus) } }),
+    );
   }
 
   async cerateMenu(body: CreateSystemDto) {
@@ -150,8 +172,6 @@ export class SystemService {
       take: pageSize,
       order: { createAt: 'DESC' },
     });
-    // console.log('res.sort', res.sort.name);
-
     return { list: timbers, total: timbersCount };
   }
 

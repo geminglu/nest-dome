@@ -8,10 +8,11 @@ import { UserEntities } from 'src/entities/user.entities';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
 import { AuthModule } from '../auth/auth.module';
 import { SysDept } from 'src/entities/SysDept';
+import { SysUserRoleNetities } from 'src/entities/sysUserRole.etities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntities, LoginLogNetities, SysDept]),
+    TypeOrmModule.forFeature([UserEntities, LoginLogNetities, SysDept, SysUserRoleNetities]),
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],

@@ -70,12 +70,8 @@ export class RoleController {
   @ResSuccess(RoleInfoDto)
   @Roles(Role.Admin)
   async update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    try {
-      const data = await this.roleService.update(+id, updateRoleDto);
-      return ResultData.ok(data);
-    } catch (error: any) {
-      return ResultData.fail(error.message);
-    }
+    const data = await this.roleService.update(+id, updateRoleDto);
+    return ResultData.ok(data);
   }
 
   @ApiOperation({

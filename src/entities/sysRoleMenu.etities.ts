@@ -1,13 +1,13 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('sys_role_menu', { schema: 'application' })
 export class SysRoleMenuNetities {
-  @Column('int', { primary: true, name: 'id' })
+  @PrimaryGeneratedColumn({ type: 'int', name: 'id' })
   id: number;
 
   @Column('int', { name: 'roleId', comment: '角色ID' })
   roleId: number;
 
-  @Column('int', { name: 'menuId', comment: '菜单ID' })
-  menuId: number;
+  @Column('varchar', { name: 'menuId', comment: '菜单ID', length: 36 })
+  menuId: string;
 }

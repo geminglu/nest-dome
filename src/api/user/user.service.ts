@@ -12,8 +12,10 @@ import {
   Not,
   In,
   FindOptionsWhere,
+  Equal,
 } from 'typeorm';
 import { UserEntities } from 'src/entities/user.entities';
+import { SysUserRoleNetities } from 'src/entities/sysUserRole.etities';
 import { UserRole, Active } from 'src/types/user';
 import { ResultData } from 'src/utils/result';
 import { LoginLogNetities } from 'src/entities/loginLog.netities';
@@ -32,6 +34,8 @@ export class UserService {
     private LoginLogRepository: Repository<LoginLogNetities>,
     @InjectRepository(SysDept)
     private SysDeptRepository: Repository<SysDept>,
+    @InjectRepository(SysUserRoleNetities)
+    private sysUserRoleRepository: Repository<SysUserRoleNetities>,
     private dataSource: DataSource,
     private deptService: DeptService,
   ) {}
@@ -68,6 +72,15 @@ export class UserService {
     user.password = hash;
     createUser.deptId && (user.deptId = createUser.deptId);
     const postRepository = await queryRunner.manager.save<UserEntities>(user);
+
+    const userRole = createUser.roles.map((item) => {
+      const sysUserRole = new SysUserRoleNetities();
+      sysUserRole.roleId = item;
+      sysUserRole.userId = postRepository.id;
+      return sysUserRole;
+    });
+
+    await queryRunner.manager.insert(SysUserRoleNetities, userRole);
     return {
       ...postRepository,
       password: createUser.password,
@@ -109,6 +122,7 @@ export class UserService {
       const builder = this.usersRepository
         .createQueryBuilder('u')
         .leftJoin(SysDept, 'b', 'b.id = u.deptId')
+        .leftJoin(SysUserRoleNetities, 'r', 'u.id = r.userId')
         .where(where)
         .limit(take)
         .offset(skip)
@@ -125,7 +139,9 @@ export class UserService {
           'u.createAt as createAt',
           'u.avatars as avatars',
           'b.dept_name as deptName',
-        ]);
+          'COALESCE(NULLIF(JSON_ARRAYAGG(r.roleId), JSON_ARRAYAGG(NULL)), JSON_ARRAY()) as roles',
+        ])
+        .groupBy('u.id');
 
       const [list, total] = await Promise.all([builder.getRawMany<UserInfo>(), builder.getCount()]);
 
@@ -178,6 +194,19 @@ export class UserService {
       const up = await queryRunner.manager.update<UserEntities>(UserEntities, id, updateUser);
       await queryRunner.commitTransaction();
       if (!up.affected) return ResultData.fail('数据不存在');
+
+      await queryRunner.manager.delete(SysUserRoleNetities, {
+        userId: Equal(id),
+      });
+
+      const userRole = user.roles.map((item) => {
+        const sysUserRole = new SysUserRoleNetities();
+        sysUserRole.roleId = item;
+        sysUserRole.userId = id;
+        return sysUserRole;
+      });
+
+      await queryRunner.manager.insert(SysUserRoleNetities, userRole);
       return ResultData.ok(user, '修改成功');
     } catch (error) {
       await queryRunner.rollbackTransaction();
