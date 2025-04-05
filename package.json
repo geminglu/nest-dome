@@ -7,17 +7,18 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start:dev": "cross-env NODE_ENV=development UPLOAD_PATH=$PWD/uploads nest start --watch",
     "start:debug": "NODE_ENV=development start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix && prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm-model-generator": "typeorm-model-generator -h localhost -d application -p 3306 -u root -x 123456 -e mysql -o temp/"
+    "typeorm-model-generator": "typeorm-model-generator -h localhost -d application -p 3306 -u root -x 123456 -e mysql -o temp/",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
@@ -83,7 +84,9 @@
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.3",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
+    "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
@@ -111,5 +114,11 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

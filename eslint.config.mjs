@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    ignores: ['eslint.config.mjs', 'dist', 'logs', 'temp'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -32,7 +32,6 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'warn',
       'no-unused-expressions': 'off',
       '@typescript-eslint/no-unused-expressions': 'off',
-      
     },
   },
 );
