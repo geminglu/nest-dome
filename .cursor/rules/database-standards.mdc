@@ -1,0 +1,622 @@
+# 数据库设计与实体规范
+
+## 数据库设计原则
+
+### 命名规范
+
+- **表名**: 使用小写字母和下划线，复数形式 (如: `users`, `user_roles`)
+- **字段名**: 使用小写字母和下划线 (如: `created_at`, `user_id`)
+- **索引名**: 使用 `idx_表名_字段名` 格式 (如: `idx_users_email`)
+- **外键名**: 使用 `fk_表名_字段名` 格式 (如: `fk_user_roles_user_id`)
+
+### 字段类型规范
+
+```sql
+-- ✅ 正确的字段类型选择
+CREATE TABLE users (
+  id VARCHAR(36) PRIMARY KEY,           -- UUID 主键
+  email VARCHAR(255) NOT NULL UNIQUE,   -- 邮箱，唯一索引
+  username VARCHAR(50) NOT NULL,        -- 用户名
+  password VARCHAR(255) NOT NULL,       -- 加密后的密码
+  is_active BOOLEAN DEFAULT TRUE,       -- 用户状态
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,            -- 软删除时间戳
+  INDEX idx_users_email (email),
+  INDEX idx_users_username (username)
+);
+```
+
+## TypeORM 实体设计规范
+
+### 基础实体结构
+
+```typescript
+// ✅ 正确的实体设计
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  Index,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
+
+@Entity('users')
+@Index(['email'], { unique: true })
+@Index(['username'])
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 255, unique: true })
+  email: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  username: string;
+
+  @Column({ type: 'varchar', length: 255, select: false }) // 密码不默认查询
+  password: string;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updatedAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  deletedAt?: Date;
+
+  // 生命周期钩子
+  @BeforeInsert()
+  @BeforeUpdate()
+  hashPassword() {
+    if (this.password) {
+      this.password = bcrypt.hashSync(this.password, 10);
+    }
+  }
+}
+```
+
+### 关系映射规范
+
+#### 一对多关系
+
+```typescript
+// ✅ 一对多关系设计
+@Entity('departments')
+export class Department {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  name: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @OneToMany(() => User, user => user.department)
+  users: User[];
+
+  @ManyToOne(() => Department, department => department.children)
+  @JoinColumn({ name: 'parent_id' })
+  parent: Department;
+
+  @OneToMany(() => Department, department => department.parent)
+  children: Department[];
+}
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ManyToOne(() => Department, department => department.users)
+  @JoinColumn({ name: 'department_id' })
+  department: Department;
+
+  @Column({ type: 'varchar', length: 36 })
+  departmentId: string;
+}
+```
+
+#### 多对多关系
+
+```typescript
+// ✅ 多对多关系设计
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @ManyToMany(() => Role, role => role.users)
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
+  })
+  roles: Role[];
+}
+
+@Entity('roles')
+export class Role {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 50, unique: true })
+  name: string;
+
+  @ManyToMany(() => User, user => user.roles)
+  users: User[];
+
+  @ManyToMany(() => Menu, menu => menu.roles)
+  @JoinTable({
+    name: 'role_menus',
+    joinColumn: { name: 'role_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'menu_id', referencedColumnName: 'id' },
+  })
+  menus: Menu[];
+}
+```
+
+### 继承关系设计
+
+```typescript
+// ✅ 继承关系设计
+@Entity('base_entities')
+@Inheritance({ column: { type: 'varchar', name: 'type' } })
+export abstract class BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
+}
+
+@Entity('users')
+export class User extends BaseEntity {
+  @Column({ type: 'varchar', length: 255, unique: true })
+  email: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  username: string;
+}
+
+@Entity('departments')
+export class Department extends BaseEntity {
+  @Column({ type: 'varchar', length: 100 })
+  name: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+}
+```
+
+## 查询优化规范
+
+### 索引设计
+
+```typescript
+// ✅ 正确的索引设计
+@Entity('users')
+@Index(['email'], { unique: true })
+@Index(['username'])
+@Index(['departmentId'])
+@Index(['createdAt'])
+@Index(['isActive', 'createdAt']) // 复合索引
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 255, unique: true })
+  email: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  username: string;
+
+  @Column({ type: 'varchar', length: 36 })
+  departmentId: string;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+```
+
+### 查询优化
+
+```typescript
+// ✅ 优化的查询方法
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
+
+  // 分页查询优化
+  async findAll(query: QueryUserDto): Promise<[User[], number]> {
+    const { page = 1, limit = 10, keyword, sortBy = 'createdAt', sortOrder = 'DESC' } = query;
+    
+    const queryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.department', 'department')
+      .leftJoinAndSelect('user.roles', 'roles');
+    
+    // 关键词搜索
+    if (keyword) {
+      queryBuilder.where(
+        'user.email LIKE :keyword OR user.username LIKE :keyword',
+        { keyword: `%${keyword}%` }
+      );
+    }
+    
+    // 排序
+    queryBuilder.orderBy(`user.${sortBy}`, sortOrder);
+    
+    // 分页
+    return queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+  }
+
+  // 单条查询优化
+  async findOne(id: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { id },
+      relations: ['department', 'roles'],
+      select: ['id', 'email', 'username', 'isActive', 'createdAt'], // 只选择需要的字段
+    });
+  }
+
+  // 批量查询优化
+  async findByIds(ids: string[]): Promise<User[]> {
+    return this.userRepository.findByIds(ids, {
+      select: ['id', 'email', 'username'],
+    });
+  }
+}
+```
+
+## 数据迁移规范
+
+### 迁移文件结构
+
+```typescript
+// ✅ 正确的迁移文件
+import { MigrationInterface, QueryRunner, Table, TableIndex, TableForeignKey } from 'typeorm';
+
+export class CreateUsersTable1234567890123 implements MigrationInterface {
+  name = 'CreateUsersTable1234567890123';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.createTable(
+      new Table({
+        name: 'users',
+        columns: [
+          {
+            name: 'id',
+            type: 'varchar',
+            length: '36',
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: 'uuid',
+          },
+          {
+            name: 'email',
+            type: 'varchar',
+            length: '255',
+            isUnique: true,
+          },
+          {
+            name: 'username',
+            type: 'varchar',
+            length: '50',
+          },
+          {
+            name: 'password',
+            type: 'varchar',
+            length: '255',
+          },
+          {
+            name: 'is_active',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            name: 'created_at',
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updated_at',
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
+            onUpdate: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'deleted_at',
+            type: 'timestamp',
+            isNullable: true,
+          },
+        ],
+      }),
+      true,
+    );
+
+    // 创建索引
+    await queryRunner.createIndex(
+      'users',
+      new TableIndex({
+        name: 'idx_users_email',
+        columnNames: ['email'],
+        isUnique: true,
+      }),
+    );
+
+    await queryRunner.createIndex(
+      'users',
+      new TableIndex({
+        name: 'idx_users_username',
+        columnNames: ['username'],
+      }),
+    );
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropTable('users');
+  }
+}
+```
+
+## 数据库配置规范
+
+### TypeORM 配置
+
+```typescript
+// ✅ 正确的数据库配置
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+
+export const databaseConfig: TypeOrmModuleOptions = {
+  type: 'mysql',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 3306,
+  username: process.env.DB_USERNAME || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_DATABASE || 'nest_dome',
+  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+  synchronize: process.env.NODE_ENV === 'development', // 开发环境自动同步
+  logging: process.env.NODE_ENV === 'development',
+  logger: 'file',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  extra: {
+    connectionLimit: 10,
+    acquireTimeout: 60000,
+    timeout: 60000,
+  },
+  cache: {
+    type: 'redis',
+    options: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT) || 6379,
+      password: process.env.REDIS_PASSWORD,
+    },
+    duration: 30000, // 30秒缓存
+  },
+};
+```
+
+### 连接池配置
+
+```typescript
+// ✅ 连接池优化配置
+export const databaseConfig: TypeOrmModuleOptions = {
+  // ... 其他配置
+  extra: {
+    connectionLimit: 10,        // 连接池大小
+    acquireTimeout: 60000,      // 获取连接超时时间
+    timeout: 60000,             // 查询超时时间
+    charset: 'utf8mb4',         // 字符集
+    timezone: '+08:00',         // 时区
+  },
+  poolSize: 10,                 // 连接池大小
+  maxQueryExecutionTime: 10000, // 最大查询执行时间
+};
+```
+
+## 数据验证规范
+
+### 实体验证
+
+```typescript
+// ✅ 实体级别的数据验证
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 255, unique: true })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsNotEmpty({ message: '邮箱不能为空' })
+  email: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  @IsString({ message: '用户名必须是字符串' })
+  @MinLength(2, { message: '用户名长度不能少于2位' })
+  @MaxLength(50, { message: '用户名长度不能超过50位' })
+  @Matches(/^[a-zA-Z0-9_]+$/, { message: '用户名只能包含字母、数字和下划线' })
+  username: string;
+
+  @Column({ type: 'varchar', length: 255, select: false })
+  @IsString({ message: '密码必须是字符串' })
+  @MinLength(6, { message: '密码长度不能少于6位' })
+  @MaxLength(255, { message: '密码长度不能超过255位' })
+  password: string;
+
+  @Column({ type: 'boolean', default: true })
+  @IsBoolean({ message: '状态必须是布尔值' })
+  isActive: boolean;
+}
+```
+
+## 软删除规范
+
+### 软删除实现
+
+```typescript
+// ✅ 软删除实现
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @DeleteDateColumn({ type: 'timestamp' })
+  deletedAt?: Date;
+
+  // 软删除方法
+  async softDelete(id: string): Promise<void> {
+    await this.userRepository.softDelete(id);
+  }
+
+  // 恢复删除
+  async restore(id: string): Promise<void> {
+    await this.userRepository.restore(id);
+  }
+
+  // 查询时排除已删除的记录
+  async findAll(): Promise<User[]> {
+    return this.userRepository.find({
+      withDeleted: false, // 默认不包含已删除的记录
+    });
+  }
+
+  // 查询包含已删除的记录
+  async findAllWithDeleted(): Promise<User[]> {
+    return this.userRepository.find({
+      withDeleted: true,
+    });
+  }
+}
+```
+
+## 审计日志规范
+
+### 审计字段
+
+```typescript
+// ✅ 审计字段设计
+@Entity('audit_logs')
+export class AuditLog {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  action: string; // CREATE, UPDATE, DELETE
+
+  @Column({ type: 'varchar', length: 100 })
+  tableName: string;
+
+  @Column({ type: 'varchar', length: 36 })
+  recordId: string;
+
+  @Column({ type: 'varchar', length: 36 })
+  userId: string;
+
+  @Column({ type: 'json', nullable: true })
+  oldValues: any;
+
+  @Column({ type: 'json', nullable: true })
+  newValues: any;
+
+  @Column({ type: 'varchar', length: 45 })
+  ipAddress: string;
+
+  @Column({ type: 'text', nullable: true })
+  userAgent: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+
+// 审计装饰器
+export function AuditLog(action: string) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalMethod = descriptor.value;
+    
+    descriptor.value = async function (...args: any[]) {
+      const result = await originalMethod.apply(this, args);
+      
+      // 记录审计日志
+      const auditLog = new AuditLog();
+      auditLog.action = action;
+      auditLog.tableName = target.constructor.name;
+      auditLog.recordId = result?.id;
+      auditLog.userId = args[0]?.userId;
+      auditLog.newValues = args[0];
+      
+      await this.auditLogRepository.save(auditLog);
+      
+      return result;
+    };
+    
+    return descriptor;
+  };
+}
+```
+
+## 性能监控规范
+
+### 查询性能监控
+
+```typescript
+// ✅ 查询性能监控
+@Injectable()
+export class DatabaseService {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly logger: Logger,
+  ) {}
+
+  async findUsersWithPerformanceMonitoring(): Promise<User[]> {
+    const startTime = Date.now();
+    
+    try {
+      const users = await this.userRepository.find({
+        relations: ['department', 'roles'],
+      });
+      
+      const executionTime = Date.now() - startTime;
+      
+      if (executionTime > 1000) { // 超过1秒记录警告
+        this.logger.warn(`Slow query detected: findUsers took ${executionTime}ms`);
+      }
+      
+      return users;
+    } catch (error) {
+      this.logger.error(`Query failed: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+}
+```
+
+description:
+globs:
+alwaysApply: false
+---

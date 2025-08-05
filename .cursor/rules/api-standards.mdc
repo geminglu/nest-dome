@@ -1,0 +1,523 @@
+# API 接口规范与文档标准
+
+## API 设计原则
+
+### RESTful API 设计
+
+- 使用 HTTP 动词表示操作类型
+- 使用名词表示资源
+- 使用复数形式命名资源
+- 使用嵌套结构表示资源关系
+
+### URL 设计规范
+
+```typescript
+// ✅ 正确的 URL 设计
+GET    /api/v1/users              // 获取用户列表
+GET    /api/v1/users/:id          // 获取单个用户
+POST   /api/v1/users              // 创建用户
+PUT    /api/v1/users/:id          // 更新用户
+DELETE /api/v1/users/:id          // 删除用户
+GET    /api/v1/users/:id/roles    // 获取用户的角色
+POST   /api/v1/users/:id/roles    // 为用户分配角色
+```
+
+## 控制器设计规范
+
+### 基础控制器结构
+
+```typescript
+// ✅ 正确的控制器设计
+@Controller('api/v1/users')
+@ApiTags('用户管理')
+@UseGuards(AuthGuard)
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get()
+  @ApiOperation({ summary: '获取用户列表' })
+  @ApiQuery({ name: 'page', required: false, description: '页码' })
+  @ApiQuery({ name: 'limit', required: false, description: '每页数量' })
+  @ApiResponse({ status: 200, description: '成功获取用户列表' })
+  async findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ): Promise<ApiResponse<User[]>> {
+    return this.userService.findAll(page, limit);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: '获取用户详情' })
+  @ApiParam({ name: 'id', description: '用户ID' })
+  @ApiResponse({ status: 200, description: '成功获取用户详情' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  async findOne(@Param('id') id: string): Promise<ApiResponse<User>> {
+    const user = await this.userService.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return { code: 200, message: 'Success', data: user };
+  }
+
+  @Post()
+  @ApiOperation({ summary: '创建用户' })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({ status: 201, description: '用户创建成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  async create(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
+    const user = await this.userService.create(createUserDto);
+    return { code: 201, message: 'User created successfully', data: user };
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: '更新用户信息' })
+  @ApiParam({ name: 'id', description: '用户ID' })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiResponse({ status: 200, description: '用户更新成功' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<ApiResponse<User>> {
+    const user = await this.userService.update(id, updateUserDto);
+    return { code: 200, message: 'User updated successfully', data: user };
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: '删除用户' })
+  @ApiParam({ name: 'id', description: '用户ID' })
+  @ApiResponse({ status: 200, description: '用户删除成功' })
+  async remove(@Param('id') id: string): Promise<ApiResponse<void>> {
+    await this.userService.remove(id);
+    return { code: 200, message: 'User deleted successfully', data: null };
+  }
+}
+```
+
+## DTO 设计规范
+
+### 基础 DTO 结构
+
+```typescript
+// ✅ 正确的 DTO 设计
+export class CreateUserDto {
+  @ApiProperty({ description: '用户邮箱', example: 'user@example.com' })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsNotEmpty({ message: '邮箱不能为空' })
+  email: string;
+
+  @ApiProperty({ description: '用户密码', example: 'password123' })
+  @IsString({ message: '密码必须是字符串' })
+  @MinLength(6, { message: '密码长度不能少于6位' })
+  @MaxLength(20, { message: '密码长度不能超过20位' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message: '密码必须包含大小写字母和数字',
+  })
+  password: string;
+
+  @ApiProperty({ description: '用户名', example: 'john_doe', required: false })
+  @IsOptional()
+  @IsString({ message: '用户名必须是字符串' })
+  @MinLength(2, { message: '用户名长度不能少于2位' })
+  @MaxLength(20, { message: '用户名长度不能超过20位' })
+  username?: string;
+
+  @ApiProperty({ description: '用户角色', example: ['user'], required: false })
+  @IsOptional()
+  @IsArray({ message: '角色必须是数组' })
+  @IsString({ each: true, message: '角色必须是字符串' })
+  roles?: string[];
+}
+
+export class UpdateUserDto extends PartialType(CreateUserDto) {
+  @ApiProperty({ description: '用户状态', example: true, required: false })
+  @IsOptional()
+  @IsBoolean({ message: '状态必须是布尔值' })
+  isActive?: boolean;
+}
+
+export class QueryUserDto {
+  @ApiProperty({ description: '页码', example: 1, required: false })
+  @IsOptional()
+  @IsInt({ message: '页码必须是整数' })
+  @Min(1, { message: '页码必须大于0' })
+  page?: number;
+
+  @ApiProperty({ description: '每页数量', example: 10, required: false })
+  @IsOptional()
+  @IsInt({ message: '每页数量必须是整数' })
+  @Min(1, { message: '每页数量必须大于0' })
+  @Max(100, { message: '每页数量不能超过100' })
+  limit?: number;
+
+  @ApiProperty({ description: '搜索关键词', example: 'john', required: false })
+  @IsOptional()
+  @IsString({ message: '搜索关键词必须是字符串' })
+  keyword?: string;
+
+  @ApiProperty({ description: '排序字段', example: 'createdAt', required: false })
+  @IsOptional()
+  @IsIn(['id', 'email', 'username', 'createdAt'], {
+    message: '排序字段只能是 id, email, username, createdAt',
+  })
+  sortBy?: string;
+
+  @ApiProperty({ description: '排序方向', example: 'DESC', required: false })
+  @IsOptional()
+  @IsIn(['ASC', 'DESC'], { message: '排序方向只能是 ASC 或 DESC' })
+  sortOrder?: 'ASC' | 'DESC';
+}
+```
+
+## 响应格式规范
+
+### 统一响应结构
+
+```typescript
+// ✅ 统一的响应格式
+export class ApiResponse<T> {
+  @ApiProperty({ description: '响应状态码', example: 200 })
+  code: number;
+
+  @ApiProperty({ description: '响应消息', example: 'Success' })
+  message: string;
+
+  @ApiProperty({ description: '响应数据' })
+  data: T;
+
+  @ApiProperty({ description: '响应时间戳', example: '2024-01-01T00:00:00.000Z' })
+  timestamp: string;
+
+  @ApiProperty({ description: '分页信息', required: false })
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// 分页响应示例
+export class PaginatedResponse<T> {
+  @ApiProperty({ description: '响应状态码', example: 200 })
+  code: number;
+
+  @ApiProperty({ description: '响应消息', example: 'Success' })
+  message: string;
+
+  @ApiProperty({ description: '数据列表' })
+  data: T[];
+
+  @ApiProperty({ description: '分页信息' })
+  pagination: {
+    @ApiProperty({ description: '当前页码', example: 1 })
+    page: number;
+
+    @ApiProperty({ description: '每页数量', example: 10 })
+    limit: number;
+
+    @ApiProperty({ description: '总数量', example: 100 })
+    total: number;
+
+    @ApiProperty({ description: '总页数', example: 10 })
+    totalPages: number;
+  };
+
+  @ApiProperty({ description: '响应时间戳', example: '2024-01-01T00:00:00.000Z' })
+  timestamp: string;
+}
+```
+
+## 错误处理规范
+
+### HTTP 状态码使用
+
+```typescript
+// ✅ 正确的状态码使用
+export class HttpStatusCodes {
+  // 成功响应
+  static OK = 200;                    // 请求成功
+  static CREATED = 201;               // 资源创建成功
+  static NO_CONTENT = 204;            // 请求成功但无返回内容
+
+  // 客户端错误
+  static BAD_REQUEST = 400;           // 请求参数错误
+  static UNAUTHORIZED = 401;          // 未授权
+  static FORBIDDEN = 403;             // 禁止访问
+  static NOT_FOUND = 404;             // 资源不存在
+  static CONFLICT = 409;              // 资源冲突
+  static UNPROCESSABLE_ENTITY = 422;  // 请求格式正确但语义错误
+
+  // 服务器错误
+  static INTERNAL_SERVER_ERROR = 500; // 服务器内部错误
+  static SERVICE_UNAVAILABLE = 503;   // 服务不可用
+}
+
+// 自定义异常类
+export class BusinessException extends HttpException {
+  constructor(message: string, statusCode: number = 400) {
+    super(
+      {
+        code: statusCode,
+        message,
+        timestamp: new Date().toISOString(),
+      },
+      statusCode,
+    );
+  }
+}
+
+export class ResourceNotFoundException extends BusinessException {
+  constructor(resource: string, id: string) {
+    super(`${resource} with ID ${id} not found`, 404);
+  }
+}
+
+export class ValidationException extends BusinessException {
+  constructor(message: string) {
+    super(message, 422);
+  }
+}
+```
+
+## API 文档规范
+
+### Swagger 配置
+
+```typescript
+// ✅ 正确的 Swagger 配置
+const config = new DocumentBuilder()
+  .setTitle('NestJS 企业级管理系统 API')
+  .setDescription('提供完整的用户管理、权限控制、文件上传等功能')
+  .setVersion('1.0.0')
+  .setContact('开发团队', 'https://github.com/your-repo', 'dev@example.com')
+  .setLicense('MIT', 'https://opensource.org/licenses/MIT')
+  .addBearerAuth(
+    {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: 'Enter JWT token',
+      in: 'header',
+    },
+    'JWT-auth',
+  )
+  .addTag('认证', '用户登录、注册、权限验证相关接口')
+  .addTag('用户管理', '用户信息的增删改查')
+  .addTag('系统管理', '部门、角色、菜单等系统配置')
+  .addTag('文件管理', '文件上传、下载、删除')
+  .build();
+```
+
+### 接口文档示例
+
+```typescript
+// ✅ 完整的接口文档
+@Controller('api/v1/auth')
+@ApiTags('认证管理')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('login')
+  @ApiOperation({
+    summary: '用户登录',
+    description: '通过邮箱和密码进行用户登录，返回JWT令牌',
+  })
+  @ApiBody({
+    type: LoginDto,
+    description: '登录信息',
+    examples: {
+      example1: {
+        summary: '标准登录',
+        value: {
+          email: 'user@example.com',
+          password: 'Password123',
+          captcha: 'ABCD',
+          captchaId: 'uuid-string',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '登录成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'Login successful' },
+        data: {
+          type: 'object',
+          properties: {
+            accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'uuid' },
+                email: { type: 'string', example: 'user@example.com' },
+                username: { type: 'string', example: 'john_doe' },
+                roles: { type: 'array', items: { type: 'string' }, example: ['user'] },
+              },
+            },
+          },
+        },
+        timestamp: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '登录失败',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Invalid credentials' },
+        timestamp: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 422,
+    description: '验证码错误',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 422 },
+        message: { type: 'string', example: 'Invalid captcha' },
+        timestamp: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+      },
+    },
+  })
+  async login(@Body() loginDto: LoginDto): Promise<ApiResponse<LoginResponse>> {
+    const result = await this.authService.login(loginDto);
+    return {
+      code: 200,
+      message: 'Login successful',
+      data: result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+```
+
+## 版本控制规范
+
+### API 版本管理
+
+```typescript
+// ✅ 正确的版本控制
+@Controller({ path: 'users', version: '1' })
+export class UserControllerV1 {
+  // V1 版本的接口
+}
+
+@Controller({ path: 'users', version: '2' })
+export class UserControllerV2 {
+  // V2 版本的接口，保持向后兼容
+}
+```
+
+## 性能优化规范
+
+### 分页查询优化
+
+```typescript
+// ✅ 优化的分页查询
+async findAll(query: QueryUserDto): Promise<PaginatedResponse<User>> {
+  const { page = 1, limit = 10, keyword, sortBy = 'createdAt', sortOrder = 'DESC' } = query;
+  
+  const queryBuilder = this.userRepository.createQueryBuilder('user');
+  
+  // 关键词搜索
+  if (keyword) {
+    queryBuilder.where(
+      'user.email LIKE :keyword OR user.username LIKE :keyword',
+      { keyword: `%${keyword}%` },
+    );
+  }
+  
+  // 排序
+  queryBuilder.orderBy(`user.${sortBy}`, sortOrder);
+  
+  // 分页
+  const [data, total] = await queryBuilder
+    .skip((page - 1) * limit)
+    .take(limit)
+    .getManyAndCount();
+  
+  const totalPages = Math.ceil(total / limit);
+  
+  return {
+    code: 200,
+    message: 'Success',
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+```
+
+## 安全规范
+
+### 输入验证
+
+```typescript
+// ✅ 严格的数据验证
+@Post()
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,                    // 移除未定义的属性
+    forbidNonWhitelisted: true,         // 禁止未定义的属性
+    transform: true,                     // 自动转换类型
+    transformOptions: {
+      enableImplicitConversion: true,   // 启用隐式转换
+    },
+    stopAtFirstError: true,             // 遇到第一个错误就停止
+  }),
+)
+async create(@Body() createUserDto: CreateUserDto) {
+  return this.userService.create(createUserDto);
+}
+```
+
+### 权限控制
+
+```typescript
+// ✅ 细粒度的权限控制
+@Controller('api/v1/users')
+@UseGuards(AuthGuard, RolesGuard)
+export class UserController {
+  @Get()
+  @Roles('admin', 'manager')
+  @Permissions('user:read')
+  async findAll() {
+    return this.userService.findAll();
+  }
+
+  @Post()
+  @Roles('admin')
+  @Permissions('user:create')
+  async create(@Body() createUserDto: CreateUserDto) {
+    return this.userService.create(createUserDto);
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  @Permissions('user:delete')
+  async remove(@Param('id') id: string) {
+    return this.userService.remove(id);
+  }
+}
+```
+
+description:
+globs:
+alwaysApply: false
+---

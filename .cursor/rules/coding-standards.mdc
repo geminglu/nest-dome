@@ -1,0 +1,390 @@
+# NestJS 代码规范与最佳实践
+
+## 代码风格规范
+
+### TypeScript 规范
+
+- 使用严格的 TypeScript 配置
+- 优先使用接口而非类型别名
+- 使用泛型提高代码复用性
+- 避免使用 `any` 类型，使用 `unknown` 替代
+
+### 命名规范
+
+```typescript
+// ✅ 正确的命名
+export class UserService {}
+export interface CreateUserDto {}
+export const API_VERSION = 'v1';
+export function getUserById(id: string) {}
+
+// ❌ 错误的命名
+export class userService {}
+export interface createUserDto {}
+export const apiVersion = 'v1';
+export function GetUserById(id: string) {}
+```
+
+### 文件组织
+
+```typescript
+// ✅ 正确的文件结构
+// user.controller.ts
+import { Controller, Get, Post } from '@nestjs/common';
+import { UserService } from './user.service';
+import { CreateUserDto, UpdateUserDto } from './dto';
+
+@Controller('users')
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get()
+  findAll() {
+    return this.userService.findAll();
+  }
+}
+```
+
+## NestJS 最佳实践
+
+### 模块设计
+
+```typescript
+// ✅ 正确的模块设计
+@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  controllers: [UserController],
+  providers: [UserService],
+  exports: [UserService], // 导出给其他模块使用
+})
+export class UserModule {}
+```
+
+### 依赖注入
+
+```typescript
+// ✅ 正确的依赖注入
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
+  ) {}
+}
+```
+
+### 异常处理
+
+```typescript
+// ✅ 正确的异常处理
+@Get(':id')
+async findOne(@Param('id') id: string) {
+  const user = await this.userService.findOne(id);
+  if (!user) {
+    throw new NotFoundException(`User with ID ${id} not found`);
+  }
+  return user;
+}
+```
+
+## 数据库操作规范
+
+### 实体定义
+
+```typescript
+// ✅ 正确的实体定义
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column({ select: false }) // 密码不默认查询
+  password: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}
+```
+
+### 查询优化
+
+```typescript
+// ✅ 正确的查询方式
+async findUserWithRoles(id: string) {
+  return this.userRepository.findOne({
+    where: { id },
+    relations: ['roles', 'department'],
+    select: ['id', 'email', 'username'], // 只选择需要的字段
+  });
+}
+```
+
+## API 设计规范
+
+### DTO 验证
+
+```typescript
+// ✅ 正确的 DTO 定义
+export class CreateUserDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(20)
+  password: string;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
+}
+```
+
+### 响应格式
+
+```typescript
+// ✅ 统一的响应格式
+export class ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+// 在控制器中使用
+@Get()
+async findAll(): Promise<ApiResponse<User[]>> {
+  const users = await this.userService.findAll();
+  return {
+    code: 200,
+    message: 'Success',
+    data: users,
+    timestamp: new Date().toISOString(),
+  };
+}
+```
+
+## 安全规范
+
+### 认证与授权
+
+```typescript
+// ✅ 正确的认证装饰器使用
+@Controller('users')
+@UseGuards(AuthGuard)
+export class UserController {
+  @Get('profile')
+  @Roles('user', 'admin')
+  getProfile(@Request() req) {
+    return req.user;
+  }
+}
+```
+
+### 输入验证
+
+```typescript
+// ✅ 正确的输入验证
+@Post()
+@UsePipes(new ValidationPipe({ 
+  whitelist: true, // 移除未定义的属性
+  forbidNonWhitelisted: true, // 禁止未定义的属性
+  transform: true, // 自动转换类型
+}))
+async create(@Body() createUserDto: CreateUserDto) {
+  return this.userService.create(createUserDto);
+}
+```
+
+## 日志规范
+
+### 结构化日志
+
+```typescript
+// ✅ 正确的日志使用
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  async create(createUserDto: CreateUserDto) {
+    this.logger.log(`Creating user with email: ${createUserDto.email}`);
+    
+    try {
+      const user = await this.userRepository.save(createUserDto);
+      this.logger.log(`User created successfully with ID: ${user.id}`);
+      return user;
+    } catch (error) {
+      this.logger.error(`Failed to create user: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+}
+```
+
+## 测试规范
+
+### 单元测试
+
+```typescript
+// ✅ 正确的单元测试
+describe('UserService', () => {
+  let service: UserService;
+  let repository: Repository<User>;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: getRepositoryToken(User),
+          useClass: Repository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    repository = module.get<Repository<User>>(getRepositoryToken(User));
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  it('should create a user', async () => {
+    const createUserDto = { email: 'test@example.com', password: 'password' };
+    const expectedUser = { id: '1', ...createUserDto };
+    
+    jest.spyOn(repository, 'save').mockResolvedValue(expectedUser);
+    
+    const result = await service.create(createUserDto);
+    expect(result).toEqual(expectedUser);
+  });
+});
+```
+
+## 性能优化
+
+### 缓存使用
+
+```typescript
+// ✅ 正确的缓存使用
+@Injectable()
+export class UserService {
+  @Cacheable('users', 300) // 缓存5分钟
+  async findAll(): Promise<User[]> {
+    return this.userRepository.find();
+  }
+}
+```
+
+### 分页查询
+
+```typescript
+// ✅ 正确的分页查询
+async findAll(page = 1, limit = 10): Promise<{ data: User[]; total: number }> {
+  const [data, total] = await this.userRepository.findAndCount({
+    skip: (page - 1) * limit,
+    take: limit,
+    order: { createdAt: 'DESC' },
+  });
+  
+  return { data, total };
+}
+```
+
+## 环境配置
+
+### 配置管理
+
+```typescript
+// ✅ 正确的配置使用
+@Injectable()
+export class DatabaseService {
+  constructor(private configService: ConfigService) {}
+
+  getDatabaseConfig() {
+    return {
+      host: this.configService.get<string>('DB_HOST'),
+      port: this.configService.get<number>('DB_PORT'),
+      username: this.configService.get<string>('DB_USERNAME'),
+      password: this.configService.get<string>('DB_PASSWORD'),
+      database: this.configService.get<string>('DB_DATABASE'),
+    };
+  }
+}
+```
+
+## 错误处理
+
+### 全局异常过滤器
+
+```typescript
+// ✅ 正确的异常处理
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const request = ctx.getRequest();
+
+    const status = 
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const message = 
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : 'Internal server error';
+
+    response.status(status).json({
+      statusCode: status,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      message,
+    });
+  }
+}
+```
+
+## 代码审查清单
+
+### 提交前检查
+
+- [ ] 代码通过 ESLint 检查
+- [ ] 代码通过 Prettier 格式化
+- [ ] 所有测试通过
+- [ ] 添加了必要的注释
+- [ ] 更新了相关文档
+- [ ] 遵循了命名规范
+- [ ] 使用了适当的错误处理
+- [ ] 添加了必要的日志记录
+
+### 性能检查
+
+- [ ] 数据库查询已优化
+- [ ] 使用了适当的缓存策略
+- [ ] 避免了 N+1 查询问题
+- [ ] 文件上传大小限制合理
+- [ ] API 响应时间在可接受范围内
+
+### 安全检查
+
+- [ ] 输入数据已验证
+- [ ] 敏感信息未暴露
+- [ ] 使用了适当的认证和授权
+- [ ] SQL 注入防护已实现
+- [ ] XSS 攻击防护已实现
+description:
+globs:
+alwaysApply: false
+
+---

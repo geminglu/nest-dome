@@ -1,0 +1,707 @@
+# 测试规范与最佳实践
+
+## 测试策略
+
+### 测试金字塔
+
+- **单元测试**: 70% - 测试单个函数或方法
+- **集成测试**: 20% - 测试模块间的交互
+- **端到端测试**: 10% - 测试完整的用户流程
+
+### 测试原则
+
+- **FIRST**: Fast, Independent, Repeatable, Self-validating, Timely
+- **AAA**: Arrange, Act, Assert
+- **测试隔离**: 每个测试应该独立运行
+- **测试可读性**: 测试名称应该清晰描述测试目的
+
+## 单元测试规范
+
+### 基础测试结构
+
+```typescript
+// ✅ 正确的单元测试结构
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserService } from './user.service';
+import { User } from '../entities/user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+
+describe('UserService', () => {
+  let service: UserService;
+  let repository: Repository<User>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: getRepositoryToken(User),
+          useClass: Repository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    repository = module.get<Repository<User>>(getRepositoryToken(User));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a new user successfully', async () => {
+      // Arrange
+      const createUserDto: CreateUserDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        username: 'testuser',
+      };
+      const expectedUser = {
+        id: 'uuid',
+        ...createUserDto,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(repository, 'save').mockResolvedValue(expectedUser);
+
+      // Act
+      const result = await service.create(createUserDto);
+
+      // Assert
+      expect(result).toEqual(expectedUser);
+      expect(repository.save).toHaveBeenCalledWith(expect.objectContaining(createUserDto));
+    });
+
+    it('should throw an error when email already exists', async () => {
+      // Arrange
+      const createUserDto: CreateUserDto = {
+        email: 'existing@example.com',
+        password: 'password123',
+        username: 'testuser',
+      };
+
+      jest.spyOn(repository, 'save').mockRejectedValue(new Error('Duplicate entry'));
+
+      // Act & Assert
+      await expect(service.create(createUserDto)).rejects.toThrow('Duplicate entry');
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return all users', async () => {
+      // Arrange
+      const expectedUsers = [
+        { id: '1', email: 'user1@example.com', username: 'user1' },
+        { id: '2', email: 'user2@example.com', username: 'user2' },
+      ];
+
+      jest.spyOn(repository, 'find').mockResolvedValue(expectedUsers);
+
+      // Act
+      const result = await service.findAll();
+
+      // Assert
+      expect(result).toEqual(expectedUsers);
+      expect(repository.find).toHaveBeenCalled();
+    });
+
+    it('should return empty array when no users exist', async () => {
+      // Arrange
+      jest.spyOn(repository, 'find').mockResolvedValue([]);
+
+      // Act
+      const result = await service.findAll();
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a user by id', async () => {
+      // Arrange
+      const userId = 'uuid';
+      const expectedUser = {
+        id: userId,
+        email: 'test@example.com',
+        username: 'testuser',
+      };
+
+      jest.spyOn(repository, 'findOne').mockResolvedValue(expectedUser);
+
+      // Act
+      const result = await service.findOne(userId);
+
+      // Assert
+      expect(result).toEqual(expectedUser);
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: userId } });
+    });
+
+    it('should return null when user not found', async () => {
+      // Arrange
+      const userId = 'non-existent-id';
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+
+      // Act
+      const result = await service.findOne(userId);
+
+      // Assert
+      expect(result).toBeNull();
+    });
+  });
+});
+```
+
+### 测试数据管理
+
+```typescript
+// ✅ 测试数据工厂
+export class UserTestFactory {
+  static createUser(overrides: Partial<User> = {}): User {
+    return {
+      id: 'test-uuid',
+      email: 'test@example.com',
+      username: 'testuser',
+      password: 'hashedpassword',
+      isActive: true,
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+      ...overrides,
+    };
+  }
+
+  static createCreateUserDto(overrides: Partial<CreateUserDto> = {}): CreateUserDto {
+    return {
+      email: 'test@example.com',
+      password: 'password123',
+      username: 'testuser',
+      ...overrides,
+    };
+  }
+
+  static createUsers(count: number): User[] {
+    return Array.from({ length: count }, (_, index) =>
+      this.createUser({
+        id: `user-${index}`,
+        email: `user${index}@example.com`,
+        username: `user${index}`,
+      }),
+    );
+  }
+}
+
+// 在测试中使用
+describe('UserService', () => {
+  it('should create a user', async () => {
+    const createUserDto = UserTestFactory.createCreateUserDto();
+    const expectedUser = UserTestFactory.createUser();
+    
+    jest.spyOn(repository, 'save').mockResolvedValue(expectedUser);
+    
+    const result = await service.create(createUserDto);
+    
+    expect(result).toEqual(expectedUser);
+  });
+});
+```
+
+## 集成测试规范
+
+### 控制器测试
+
+```typescript
+// ✅ 控制器集成测试
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../app.module';
+import { UserService } from '../user/user.service';
+import { UserTestFactory } from './factories/user.factory';
+
+describe('UserController (e2e)', () => {
+  let app: INestApplication;
+  let userService: UserService;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    userService = moduleFixture.get<UserService>(UserService);
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    // 清理测试数据
+    await userService.clear();
+  });
+
+  describe('/users (GET)', () => {
+    it('should return all users', async () => {
+      // Arrange
+      const users = UserTestFactory.createUsers(3);
+      await Promise.all(users.map(user => userService.create(user)));
+
+      // Act & Assert
+      const response = await request(app.getHttpServer())
+        .get('/users')
+        .expect(200);
+
+      expect(response.body.data).toHaveLength(3);
+      expect(response.body.code).toBe(200);
+    });
+
+    it('should return empty array when no users exist', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/users')
+        .expect(200);
+
+      expect(response.body.data).toEqual([]);
+    });
+  });
+
+  describe('/users (POST)', () => {
+    it('should create a new user', async () => {
+      const createUserDto = UserTestFactory.createCreateUserDto();
+
+      const response = await request(app.getHttpServer())
+        .post('/users')
+        .send(createUserDto)
+        .expect(201);
+
+      expect(response.body.data.email).toBe(createUserDto.email);
+      expect(response.body.data.username).toBe(createUserDto.username);
+      expect(response.body.data.id).toBeDefined();
+    });
+
+    it('should return 400 when email is invalid', async () => {
+      const createUserDto = UserTestFactory.createCreateUserDto({
+        email: 'invalid-email',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/users')
+        .send(createUserDto)
+        .expect(400);
+
+      expect(response.body.message).toContain('邮箱格式不正确');
+    });
+  });
+
+  describe('/users/:id (GET)', () => {
+    it('should return a user by id', async () => {
+      const user = await userService.create(UserTestFactory.createCreateUserDto());
+
+      const response = await request(app.getHttpServer())
+        .get(`/users/${user.id}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(user.id);
+    });
+
+    it('should return 404 when user not found', async () => {
+      await request(app.getHttpServer())
+        .get('/users/non-existent-id')
+        .expect(404);
+    });
+  });
+});
+```
+
+### 服务集成测试
+
+```typescript
+// ✅ 服务集成测试
+describe('UserService Integration', () => {
+  let app: INestApplication;
+  let userService: UserService;
+  let dataSource: DataSource;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [User],
+          synchronize: true,
+        }),
+        UserModule,
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    userService = moduleFixture.get<UserService>(UserService);
+    dataSource = moduleFixture.get<DataSource>(DataSource);
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    // 清理数据库
+    await dataSource.synchronize(true);
+  });
+
+  it('should create and retrieve a user', async () => {
+    const createUserDto = UserTestFactory.createCreateUserDto();
+    
+    const createdUser = await userService.create(createUserDto);
+    expect(createdUser.email).toBe(createUserDto.email);
+    
+    const retrievedUser = await userService.findOne(createdUser.id);
+    expect(retrievedUser).toBeDefined();
+    expect(retrievedUser.email).toBe(createUserDto.email);
+  });
+});
+```
+
+## 端到端测试规范
+
+### 完整流程测试
+
+```typescript
+// ✅ 端到端测试
+describe('User Management E2E', () => {
+  let app: INestApplication;
+  let authToken: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+
+    // 获取认证令牌
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'admin@example.com',
+        password: 'admin123',
+      });
+
+    authToken = loginResponse.body.data.accessToken;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  describe('Complete User Management Flow', () => {
+    it('should complete full user management cycle', async () => {
+      // 1. 创建用户
+      const createUserDto = UserTestFactory.createCreateUserDto();
+      const createResponse = await request(app.getHttpServer())
+        .post('/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(createUserDto)
+        .expect(201);
+
+      const userId = createResponse.body.data.id;
+
+      // 2. 获取用户列表
+      const listResponse = await request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(listResponse.body.data).toHaveLength(1);
+
+      // 3. 获取单个用户
+      const getResponse = await request(app.getHttpServer())
+        .get(`/users/${userId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(getResponse.body.data.id).toBe(userId);
+
+      // 4. 更新用户
+      const updateDto = { username: 'updateduser' };
+      const updateResponse = await request(app.getHttpServer())
+        .put(`/users/${userId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(updateDto)
+        .expect(200);
+
+      expect(updateResponse.body.data.username).toBe('updateduser');
+
+      // 5. 删除用户
+      await request(app.getHttpServer())
+        .delete(`/users/${userId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      // 6. 验证用户已删除
+      await request(app.getHttpServer())
+        .get(`/users/${userId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404);
+    });
+  });
+});
+```
+
+## 测试工具和辅助函数
+
+### 测试工具类
+
+```typescript
+// ✅ 测试工具类
+export class TestUtils {
+  static async createTestApp(): Promise<INestApplication> {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    const app = moduleFixture.createNestApplication();
+    await app.init();
+    return app;
+  }
+
+  static async cleanupDatabase(dataSource: DataSource): Promise<void> {
+    const entities = dataSource.entityMetadatas;
+    for (const entity of entities) {
+      const repository = dataSource.getRepository(entity.name);
+      await repository.clear();
+    }
+  }
+
+  static generateAuthToken(userId: string): string {
+    return jwt.sign({ sub: userId }, process.env.JWT_SECRET);
+  }
+
+  static async createTestUser(userService: UserService): Promise<User> {
+    const createUserDto = UserTestFactory.createCreateUserDto();
+    return await userService.create(createUserDto);
+  }
+}
+
+// 测试装饰器
+export function withDatabase() {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalMethod = descriptor.value;
+    
+    descriptor.value = async function (...args: any[]) {
+      const dataSource = this.moduleFixture.get<DataSource>(DataSource);
+      
+      try {
+        return await originalMethod.apply(this, args);
+      } finally {
+        await TestUtils.cleanupDatabase(dataSource);
+      }
+    };
+    
+    return descriptor;
+  };
+}
+```
+
+### 测试配置
+
+```typescript
+// ✅ 测试配置文件
+export const testConfig = {
+  database: {
+    type: 'sqlite',
+    database: ':memory:',
+    synchronize: true,
+    logging: false,
+  },
+  jwt: {
+    secret: 'test-secret',
+    expiresIn: '1h',
+  },
+  upload: {
+    dest: './test-uploads',
+  },
+};
+
+// Jest 配置
+export const jestConfig = {
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  rootDir: 'src',
+  testRegex: '.*\\.spec\\.ts$',
+  transform: {
+    '^.+\\.(t|j)s$': 'ts-jest',
+  },
+  collectCoverageFrom: [
+    '**/*.(t|j)s',
+    '!**/*.spec.ts',
+    '!**/*.test.ts',
+  ],
+  coverageDirectory: '../coverage',
+  testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/../test/setup.ts'],
+};
+```
+
+## 测试覆盖率规范
+
+### 覆盖率目标
+
+```typescript
+// ✅ 覆盖率配置
+export const coverageThreshold = {
+  global: {
+    branches: 80,
+    functions: 80,
+    lines: 80,
+    statements: 80,
+  },
+  './src/services/': {
+    branches: 90,
+    functions: 90,
+    lines: 90,
+    statements: 90,
+  },
+  './src/controllers/': {
+    branches: 85,
+    functions: 85,
+    lines: 85,
+    statements: 85,
+  },
+};
+
+// 测试脚本
+export const testScripts = {
+  'test': 'jest',
+  'test:watch': 'jest --watch',
+  'test:cov': 'jest --coverage',
+  'test:debug': 'node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand',
+  'test:e2e': 'jest --config ./test/jest-e2e.json',
+  'test:ci': 'jest --ci --coverage --watchAll=false',
+};
+```
+
+## 性能测试规范
+
+### 性能测试示例
+
+```typescript
+// ✅ 性能测试
+describe('UserService Performance', () => {
+  it('should handle bulk operations efficiently', async () => {
+    const startTime = Date.now();
+    const userCount = 1000;
+    
+    // 批量创建用户
+    const createPromises = Array.from({ length: userCount }, (_, index) =>
+      userService.create(UserTestFactory.createCreateUserDto({
+        email: `user${index}@example.com`,
+      }))
+    );
+    
+    const users = await Promise.all(createPromises);
+    const createTime = Date.now() - startTime;
+    
+    expect(users).toHaveLength(userCount);
+    expect(createTime).toBeLessThan(5000); // 5秒内完成
+    
+    // 批量查询测试
+    const queryStartTime = Date.now();
+    const allUsers = await userService.findAll();
+    const queryTime = Date.now() - queryStartTime;
+    
+    expect(allUsers).toHaveLength(userCount);
+    expect(queryTime).toBeLessThan(1000); // 1秒内完成
+  });
+});
+```
+
+## 测试最佳实践
+
+### 测试命名规范
+
+```typescript
+// ✅ 清晰的测试命名
+describe('UserService', () => {
+  describe('create', () => {
+    it('should create a user with valid data', () => {});
+    it('should throw error when email already exists', () => {});
+    it('should hash password before saving', () => {});
+    it('should set default values for optional fields', () => {});
+  });
+
+  describe('findAll', () => {
+    it('should return all active users', () => {});
+    it('should return empty array when no users exist', () => {});
+    it('should apply pagination correctly', () => {});
+    it('should filter by department when specified', () => {});
+  });
+});
+```
+
+### 测试数据隔离
+
+```typescript
+// ✅ 测试数据隔离
+describe('UserService', () => {
+  let testDatabase: DataSource;
+
+  beforeAll(async () => {
+    // 为每个测试套件创建独立的数据库
+    testDatabase = new DataSource({
+      type: 'sqlite',
+      database: ':memory:',
+      entities: [User],
+      synchronize: true,
+    });
+    await testDatabase.initialize();
+  });
+
+  afterAll(async () => {
+    await testDatabase.destroy();
+  });
+
+  beforeEach(async () => {
+    // 每个测试前清理数据
+    await testDatabase.synchronize(true);
+  });
+});
+```
+
+### 异步测试处理
+
+```typescript
+// ✅ 异步测试处理
+describe('UserService', () => {
+  it('should handle async operations correctly', async () => {
+    const createUserDto = UserTestFactory.createCreateUserDto();
+    
+    // 使用 async/await
+    const user = await userService.create(createUserDto);
+    expect(user).toBeDefined();
+    
+    // 测试异步错误
+    await expect(userService.findOne('non-existent')).resolves.toBeNull();
+    
+    // 测试异步异常
+    await expect(userService.create({ email: 'invalid' } as any))
+      .rejects.toThrow();
+  });
+});
+```
+
+description:
+globs:
+alwaysApply: false
+---
