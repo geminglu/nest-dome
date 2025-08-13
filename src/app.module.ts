@@ -16,7 +16,7 @@ import { SystemModule } from './api/system/system.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env.local', `.env.${process.env.NODE_ENV}`],
+      envFilePath: ['.env.local', `.env.${process.env.NODE_ENV}`, '.env'],
       isGlobal: true,
       load: [emailConfig, dsConfig, config],
     }),

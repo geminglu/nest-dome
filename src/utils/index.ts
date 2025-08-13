@@ -85,3 +85,53 @@ export function generateRandomString(
 
   return result;
 }
+
+/**
+ * 等待
+ * @param {number} ms - 等待时间，单位毫秒
+ * @returns {Promise<void>} 等待结果
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 生成显示框
+ * @param items 显示内容
+ */
+export function generateDisplayBox(items: string[]): string {
+  // 计算最大行长度（去除颜色代码）
+  const maxLength = Math.max(
+    ...items.map((url) => {
+      // 移除ANSI颜色代码来计算实际字符长度
+      const cleanUrl = removeAnsiColors(url);
+      return cleanUrl.length + 2; // +2 for the "│  " prefix
+    }),
+  );
+
+  // 创建动态宽度的框
+  const boxWidth = maxLength + 4; // +4 for padding
+  const topBorder = '┌' + '─'.repeat(boxWidth) + '┐';
+  const bottomBorder = '└' + '─'.repeat(boxWidth) + '┘';
+
+  const boxContent = items
+    .map((url) => {
+      const cleanUrl = removeAnsiColors(url);
+      const padding = ' '.repeat(boxWidth - cleanUrl.length - 3);
+      return `│  ${url}${padding}│`;
+    })
+    .join('\n');
+
+  // 添加上下边距的空行
+  const emptyLine = `│${' '.repeat(boxWidth)}│`;
+  return `\n${topBorder}\n${emptyLine}\n${boxContent}\n${emptyLine}\n${bottomBorder}`;
+}
+
+/**
+ * 移除ANSI颜色代码的辅助函数
+ * @param str
+ */
+export function removeAnsiColors(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}

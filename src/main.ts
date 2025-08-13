@@ -10,6 +10,10 @@ import { HttpFilter, ExcepFilter } from 'src/common/filter';
 import winstonLogger from 'src/common/logger';
 import loggerMiddleware from 'src/middleware/logger';
 import { STATIC_PATH, STATIC_UP_PATH } from './utils/constant';
+import config from './config';
+import { generateDisplayBox } from './utils';
+
+const { port, swagger, graphqlIde } = config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -48,24 +52,33 @@ async function bootstrap() {
     }),
   );
 
-  // swagger配置
-  const config = new DocumentBuilder()
-    .setTitle('Nestjs-dome')
-    .setDescription('dome')
-    .setVersion('1.0')
-    .setExternalDoc('JSON', `http://localhost:${process.env.PORT || 3000}/api-docs-json`)
-    .addBearerAuth()
-    .build();
-  const options: SwaggerDocumentOptions = {
-    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
-  };
-  const document = SwaggerModule.createDocument(app, config, options);
-  SwaggerModule.setup('/api-docs', app, document);
+  if (swagger) {
+    // swagger配置
+    const config = new DocumentBuilder()
+      .setTitle('Nestjs-dome')
+      .setDescription('dome')
+      .setVersion('1.0')
+      .setExternalDoc('JSON', `http://localhost:${port}/api-docs-json`)
+      .addBearerAuth()
+      .build();
+    const options: SwaggerDocumentOptions = {
+      operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    };
+    const document = SwaggerModule.createDocument(app, config, options);
+    SwaggerModule.setup('/api-docs', app, document);
+  }
 
-  await app.listen(process.env.PORT || 3000);
+  await app.listen(port);
 }
 
-bootstrap().then(() => {
-  Logger.log(`API：http://localhost:${process.env.PORT || 3000}`, 'main.js');
-  Logger.log(`swagger：http://localhost:${process.env.PORT || 3000}/api-docs`, 'main.js');
+void bootstrap().then(() => {
+  const urls = [`API：\x1b[34mhttp://localhost:${port}\x1b[0m`];
+  if (swagger) {
+    urls.push(`swagger：\x1b[34mhttp://localhost:${port}/api-docs\x1b[0m`);
+  }
+  if (graphqlIde) {
+    urls.push(`graphql：\x1b[34mhttp://localhost:${port}/graphql\x1b[0m`);
+  }
+
+  Logger.verbose(generateDisplayBox(urls), 'main');
 });

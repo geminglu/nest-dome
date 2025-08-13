@@ -17,7 +17,7 @@ import { LoginLogNetities } from 'src/entities/loginLog.netities';
     forwardRef(() => UserModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret: configService.get('config.secret'),
         signOptions: { expiresIn: configService.get('config.ACCESS_TOKEN_EXPIRES') },
       }),
